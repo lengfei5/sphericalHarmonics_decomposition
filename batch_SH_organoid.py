@@ -28,165 +28,6 @@ from sys import exit
 #from vedo import spher2cart
 #from vedo import printc, spher2cart, probePoints
 
-def samplePoints(vol, expo, N, radiusDiscretisation):
-    """Compute sample points."""
-    pos = vol.center()
-    rmax = vol.diagonalSize()/2
-
-    samplePoints = []
-    for th in np.linspace(0, np.pi, N, endpoint=False):
-        for ph in np.linspace(0, 2*np.pi, N, endpoint=False):
-
-            # compute sample points
-            p = spher2cart(rmax, th, ph)
-            # making discretization more dense away from the center
-            p_tmp = p / (radiusDiscretisation-1)**expo
-            for j in range(radiusDiscretisation):
-                SP = pos + p_tmp * (j**expo)
-                samplePoints.append(SP)
-
-    del vol
-    return np.array(samplePoints)
-
-def confirm(message):
-    """
-    Ask user to enter Y or N (case-insensitive).
-
-    :return: True if the answer is Y.
-    :rtype: bool
-    """
-    answer = ""
-    while answer not in ["y", "n"]:
-        answer = input(message).lower()
-    return answer == "y"
-
-
-def pathExists(path):
-    if not os.path.exists(path):
-        os.makedirs(path, exist_ok=True)
-        printc("Directory ", path, " Created ", c='green')
-    else:
-        printc("Directory ", path, " already exists", c='red')
-        if confirm("Should I delete the folder and create a new one [Y/N]? "):
-            shutil.rmtree(path)
-            os.makedirs(path, exist_ok=True)
-            printc("Directory ", path, " Created ", c='green')
-        else:
-            exit()
-
-
-def voxelIntensity(vol, expo, N, radiusDiscretisation):
-    """Compute voxel intensities."""
-    pos = vol.center()
-    rmax = vol.diagonalSize()/2
-
-    scalars = []
-
-    for th in np.linspace(0, np.pi, N, endpoint=False):
-        for ph in np.linspace(0, 2*np.pi, N, endpoint=False):
-
-            # compute sample points
-            p = spher2cart(rmax, th, ph)
-            samplePointsTmp = []
-
-            # making discretization more dense away from the center
-            p_tmp = p / (radiusDiscretisation-1)**expo
-            for j in range(radiusDiscretisation):
-                SP = pos + p_tmp * (j**expo)
-                samplePointsTmp.append(SP)
-
-            # compute intensities
-            pb = probePoints(vol, samplePointsTmp)
-
-            del samplePointsTmp
-
-            # making the intensities growing outside the volume according to the gradient
-            scalarsTmp = pb.getPointArray()
-            nonz = np.nonzero(scalarsTmp)[0]
-            if len(nonz) > 2:
-                lastNoZeroId = nonz[-1]  # find the last value != 0
-                secondlastNoZeroId = nonz[-2]
-                # find the last value != 0
-                lastNoZero = scalarsTmp[lastNoZeroId]
-                secondlastNoZero = scalarsTmp[secondlastNoZeroId]
-                dx = lastNoZero - secondlastNoZero
-
-            for i in range(lastNoZeroId+1, len(scalarsTmp)):
-                scalarsTmp[i] = scalarsTmp[i-1] + dx
-            scalars.append(scalarsTmp.tolist())
-
-            del pb, scalarsTmp
-
-    del vol
-    gc.collect()
-
-    # return allIntensitiesMatrix
-    return np.array(scalars).reshape((N * N, radiusDiscretisation))
-
-
-def forwardTransformation(matrixOfIntensities, N, lmax):
-
-    ##############################################
-
-    coeff = matrixOfIntensities
-
-    ##############################################
-    # SPHARNM
-    allClm = np.zeros((matrixOfIntensities.shape[1], 2, lmax, lmax))
-    for j in range(allClm.shape[0]):
-        formattedcoeff = np.reshape(coeff[:, j], (N, N))
-        SH = pyshtools.SHGrid.from_array(formattedcoeff)
-        clm = SH.expand()
-
-        allClm[j, :, :, :] = clm.to_array(lmax=lmax - 1)
-
-    del formattedcoeff, clm, matrixOfIntensities
-
-    return allClm
-
-
-def inverseTransformations(allClm, allIntensitiesShape, N, lmax):
-    """Make inverse SPHARM."""
-    from scipy.interpolate import griddata
-
-    aSH_recoMatrix = np.zeros((allIntensitiesShape[0], allIntensitiesShape[1]))
-
-    for j in range(allClm.shape[0]):
-        # inverse SPHARM coefficients
-        clmCoeffs = pyshtools.SHCoeffs.from_array(allClm[j, :, :, :])
-        SH_reco = clmCoeffs.expand(lmax=lmax - 1)
-        # grid_reco.plot()
-        aSH_reco = SH_reco.to_array()
-
-        ##############################
-        pts1 = []
-        ll = []
-        for ii, long in enumerate(np.linspace(0, 360, num=aSH_reco.shape[1], endpoint=True)):
-            for jj, lat in enumerate(np.linspace(90, -90, num=aSH_reco.shape[0], endpoint=True)):
-                th = np.deg2rad(90 - lat)
-                ph = np.deg2rad(long)
-                p = spher2cart(aSH_reco[jj][ii], th, ph)
-                pts1.append(p)
-                ll.append((lat, long))
-
-        radii = aSH_reco.T.ravel()
-
-        # make a finer grid
-        n = N * 1j
-        l_min, l_max = np.array(ll).min(axis=0), np.array(ll).max(axis=0)
-        grid = np.mgrid[l_max[0]:l_min[0]:n, l_min[1]:l_max[1]:n]
-        grid_x, grid_y = grid
-        agrid_reco_finer = griddata(ll, radii, (grid_x, grid_y), method='cubic')
-        ##############################
-
-        formatted_aSH_reco = np.reshape(agrid_reco_finer, (N * N))
-
-        aSH_recoMatrix[:, j] = formatted_aSH_reco
-
-    del formatted_aSH_reco, agrid_reco_finer, grid_x, grid_y, grid
-
-    return aSH_recoMatrix
-
 from sys import argv, exit
 import numpy as np
 import pyshtools
@@ -199,33 +40,6 @@ from skimage.io import imsave
 #from skimage import filters
 #from skimage import morphology
 #from pyclesperanto_prototype import imshow
-#import pyclesperanto_prototype as cle
-#import matplotlib.pyplot as plt
-
-#from scipy.interpolate import griddata
-
-
-lmax = 20
-N = 500          # number of grid intervals on the unit sphere
-rmax = 1400
-x0 = [0, 0, 0]  # set object at this position
-xLimb = [-200, 0, 200]
-cutOrigin = [150, 0, 0]
-deg_fit = 6
-
-CPoutDir = "/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/test_WTd6"
-WTDir = "/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/test_WTd6"
-
-#CPoutDir = "/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/CPouts2"
-#ImageDir = "/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/d4_10x_Pax6KO_WTchim"
-
-#DataPath = '/Users/jingkui.wang/workspace/imp/image_analysis/S-BIAD441/limbs/limbs-noFlank/'
-path_results = 'res/' + 'testScript_organoid_WTd6' + '/'
-
-#pathExists(path_results)
-
-printc('lmax =', lmax, 'N =', N, 'deg_fit =', deg_fit, c='y')
-
 from skimage import measure
 import pandas as pd
 from skimage.filters import threshold_otsu, rank
@@ -239,17 +53,34 @@ import gc
 #matplotlib.use('Agg')  # Use Agg backend for non-interactive plotting
 import matplotlib.pyplot as plt
 
+#receiving input argument
+input_image = sys.argv[1]
+path_results = sys.argv[2]
+
+
+
+path_results = path_results + '/'
+if not os.path.exists(path_results):
+    os.makedirs(path_results)
+
+#pathExists(path_results)
+lmax = 20
+N = 500          # number of grid intervals on the unit sphere
+rmax = 1400
+x0 = [0, 0, 0]  # set object at this position
+xLimb = [-200, 0, 200]
+cutOrigin = [150, 0, 0]
+deg_fit = 6
 radiusDiscretisation = 50
 N = 200
-FFTexpansion = radiusDiscretisation
 expo = 1.0
-#print(outDir)
+
+printc('lmax =', lmax, 'N =', N, 'deg_fit =', deg_fit, c='y')
 
 from itertools import chain
 col_names =  [['image', 'cyst_index', 'cyst_size', 'cyst_r'], ['power_per_l_m'+i for i in map(str, range(lmax+1))], ['power_per_l'+i for i in map(str, range(lmax+1))]]
 col_names = list(chain(*col_names))
 #col_names
-
 
 #CPoutDir = "../images_data/CPouts2"
 for nm in os.listdir(CPoutDir):
@@ -410,4 +241,3 @@ for nm in os.listdir(CPoutDir):
         del mask, C2, C3, C4, df, labels_mask, nb_cyst
         gc.collect()
         print('gc collection done for image' + fileName)
-        
