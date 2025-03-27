@@ -79,7 +79,7 @@ res = data.frame(res, stringsAsFactors = TRUE)
 hist(log10(res$cyst_size), breaks = 50, xlim = c(2.0, 6.0))
 abline(v = c(3, 4.7), col = 'red')
 
-res = res[which(res$cyst_size > 10^3 & res$cyst_size < 10^4.7), ]
+res = res[which(res$cyst_size > 10^3.5 & res$cyst_size < 10^4.7), ]
 
 hist(res$lmax)
 table(res$lmax)
