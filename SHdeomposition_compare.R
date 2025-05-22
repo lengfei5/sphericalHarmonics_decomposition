@@ -436,9 +436,83 @@ res = data.frame(res, l_opt, stringsAsFactors = FALSE)
 
 res = res[, -grep('power_per_', colnames(res))]
 
-res$lmax_norm = res$lmax/res$r2
+#res$lmax_norm = res$lmax/res$r2
 res$r2_log = log10(res$r2)
 res$size_log = log10(res$cyst_size)
+
+res$lmax_norm = log10(res$lmax/res$r2)
+res$wavelength = log10(res$r2/res$lmax)
+res$wavelength_v2 = 2*pi*sqrt(res$r2)/(res$lmax*(res$lmax+1))
+
+
+
+ggplot(data = res, aes(x = lmax_norm,  y = lmax_pct, color = time)) + 
+  geom_point(size = 1.6) +
+  #geom_line(aes(y = mean, color = time), size = 1) + 
+  #geom_ribbon(aes(y = mean, ymin = mean - sd, ymax = mean + sd, fill = time), alpha = .2) +
+  xlab("normalized l (log10 lmax/surface)") + 
+  ylab("pattern quality (log10 % variance by dominant SH degree) ") + 
+  theme_bw() +  
+  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  theme(legend.position = c(1.05,.8), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+ggsave(filename = paste0(figureDir, '/normalizedLmax_vs_patternQuality_v1.pdf'), height = 6, width = 10)
+
+## test some other normalization
+res$lmax_norm2 = log10(res$lmax/res$cyst_size)
+ggplot(data = res, aes(x = lmax_norm2,  y = lmax_pct, color = time)) + 
+  geom_point(size = 1.6) +
+  #geom_line(aes(y = mean, color = time), size = 1) + 
+  #geom_ribbon(aes(y = mean, ymin = mean - sd, ymax = mean + sd, fill = time), alpha = .2) +
+  xlab("normalized l (log10 lmax/surface)") + 
+  ylab("pattern quality (log10 % variance by dominant SH degree) ") + 
+  theme_bw() +  
+  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  theme(legend.position = c(1.05,.8), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+
+## add image name and cyst index
+library(ggrepel)
+res$cyst_name = rownames(res)
+
+#xx = res[which(res$image == '211209_d3_RAd2_D2_52_01_isotropic'), ]
+#xx$cyst = xx$cyst_index - 1
+
+res$cyst = res$cyst_index
+
+ggplot(data = res, aes(x = lmax_norm,  y = lmax_pct, color = time, label = cyst)) + 
+  geom_point(size = 1.6) +
+  #geom_line(aes(y = mean, color = time), size = 1) + 
+  #geom_ribbon(aes(y = mean, ymin = mean - sd, ymax = mean + sd, fill = time), alpha = .2) +
+  xlab("normalized l (log10 lmax/surface)") + 
+  ylab("pattern quality (log10 % variance by dominant SH degree) ") + 
+  theme_bw() +  
+  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm")) +
+  theme(legend.position = c(1.05,.8), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14)) +
+  geom_text(aes(label=ifelse(image == '211209_d3_RAd2_D2_52_01_isotropic', as.character(cyst),'')),
+            hjust=0,vjust=0)
+  # geom_label_repel(aes(label = cyst),
+  #                  box.padding   = 0.1, 
+  #                  point.padding = 0.1,
+  #                  segment.color = 'grey50')
+
+ggsave(filename = paste0(figureDir, '/normalizedLmax_vs_patternQuality_v1.pdf'), height = 6, width = 10)
+
 
 plot(res$nb_local_max, res$lmax, ylim = range(c(res$l_extrem, res$l_optm, res$lmax)), col = 'darkorange')
 abline(0, 1, lwd = 2.0, col = 'red')
@@ -468,9 +542,7 @@ ggplot(data = res, aes(x = size_log,  y = lmax_pct, color = time)) +
 ggsave(filename = paste0(figureDir, '/patternQuality_cystSize_test_v1.pdf'), height = 6, width = 10)
 
 
-res$lmax_norm = log10(res$lmax/res$r2)
-res$wavelength = log10(res$r2/res$lmax)
-res$wavelength_v2 = 2*pi*sqrt(res$r2)/(res$lmax*(res$lmax+1))
+
 
 ggplot(data = res, aes(x = wavelength,  y = lmax_pct, color = time)) + 
   geom_point(size = 1.6) +
@@ -489,22 +561,7 @@ ggplot(data = res, aes(x = wavelength,  y = lmax_pct, color = time)) +
 ggsave(filename = paste0(figureDir, '/dominantWavelength_patternQuality_v1.pdf'), height = 6, width = 10)
 
 
-ggplot(data = res, aes(x = lmax_norm,  y = lmax_pct, color = time)) + 
-  geom_point(size = 1.6) +
-  #geom_line(aes(y = mean, color = time), size = 1) + 
-  #geom_ribbon(aes(y = mean, ymin = mean - sd, ymax = mean + sd, fill = time), alpha = .2) +
-  xlab("normalized l (log10 lmax/surface)") + 
-  ylab("pattern quality (log10 % variance by dominant SH degree) ") + 
-  theme_bw() +  
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
-  theme(legend.key = element_blank()) + 
-  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
-  theme(legend.position = c(1.05,.8), legend.direction = "vertical") +
-  theme(legend.title = element_blank(), 
-        legend.text = element_text(size = 14))
 
-ggsave(filename = paste0(figureDir, '/normalizedLmax_vs_patternQuality_v1.pdf'), height = 6, width = 10)
 
 
 
@@ -521,10 +578,11 @@ ggplot(data = res, aes(x = size_log,  y = lmax, color = time)) +
   theme(legend.title = element_blank())
 
 
-xx = res[which((res$time == 'd5'|res$time == 'd6') & res$lmax <= 3), ]
+#xx = res[which((res$time == 'd5'|res$time == 'd6') & res$lmax <= 3), ]
+xx = res
 
 xx$r2_log2 = log2(xx$cyst_size)
-ggplot(xx, aes(x=lmax, y=r2_log, group = lmax)) + 
+ggplot(, aes(x=lmax, y=r2_log, group = lmax)) + 
   geom_boxplot() + 
   theme_classic() +
   theme(axis.text.x = element_text(size = 12), 

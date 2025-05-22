@@ -15,6 +15,7 @@ if(!dir.exists(outDir)) dir.create(outDir)
 
 library(ggplot2)
 library(plotly)
+library(patchwork)
 
 ########################################################
 ########################################################
@@ -23,39 +24,145 @@ library(plotly)
 ########################################################
 ########################################################
 res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/",
-                             "images_data/results/test_WT_FoxA2_pct/wt_FoxA2_Pax6_voxel_counts.csv"), 
+                             "images_data/results/test_WT_FoxA2_pct/",
+                             "wt_FoxA2_Pax6_voxel_counts_global_cyst_otsu_li_mean_localThreshold.csv"), 
                header = TRUE, row.names = c(1))
 
-res$pct_foxa2 = res$nb_foxa2_postive/res$total_postives
+res$pct_foxa2_otsuCyst = res$nb_foxa2_otsu_cyst/(res$nb_foxa2_otsu_cyst + res$nb_pax6_otsu_cyst + res$nb_double_otsu_cyst)
+res$pct_foxa2_otsuGlobal = res$nb_foxa2_otsu_global/(res$nb_foxa2_otsu_global + 
+                                                       res$nb_pax6_otsu_global + res$nb_double_otsu_global)
 
-plot(res$cyst_size, res$pct_foxa2)
-abline(v = c(5000, 10000), lwd = 2.0, col = 'red')
+res$pct_foxa2_liCyst = res$nb_foxa2_li_cyst/(res$nb_foxa2_li_cyst + res$nb_pax6_li_cyst + res$nb_double_li_cyst)
+res$pct_foxa2_liGlobal = res$nb_foxa2_li_global/(res$nb_foxa2_li_global + res$nb_pax6_li_global +
+                                                   res$nb_double_li_global)
 
-hist(res$cutoff_foxa2, breaks = 40)
-abline(v = c(0.6, 2.0), lwd = 2.0, col = 'red')
+res$pct_foxa2_local = res$nb_foxa2_localThreshold/(res$nb_foxa2_localThreshold + res$nb_pax6_localThreshold +
+                                                     res$nb_double_localThreshold)
 
-res = res[which(res$cutoff_foxa2 > 0.6 & res$cutoff_foxa2 < 2.0), ]
-
-plot(res$cyst_size, res$pct_foxa2)
-abline(v = c(5000, 10000), lwd = 2.0, col = 'red')
-
-hist(res$cutoff_pax6, breaks = 40)
-abline(v = c(0.6, 2.0), lwd = 2.0, col = 'red')
-
-res = res[which(res$cutoff_pax6 > 0.6 & res$cutoff_foxa2 < 2.0), ]
-
-plot(res$cyst_size, res$pct_foxa2)
-abline(v = c(5000, 10000), lwd = 2.0, col = 'red')
+res$pct_foxa2_mean = res$nb_foxa2_mean_cyst/(res$nb_foxa2_mean_cyst + res$nb_pax6_mean_cyst + 
+                                               res$nb_double_mean_cyst)
 
 
-plot(res$total, res$pct_foxa2)
-plot(res$cyst_size, res$total) ## here total is the number of FoxA2+, Pax6+ and FoxA2+&Pax6+ 
-abline(a = 0, b = 0.5, lwd = 2.0, col = 'red')
+USE_OTSU_cyst = FALSE
+if(USE_OTSU_cyst){
+  res$pct_foxa2 = res$pct_foxa2_otsuCyst
+  res$pct_double = res$nb_double_otsu_cyst/(res$nb_foxa2_otsu_cyst + res$nb_pax6_otsu_cyst + res$nb_double_otsu_cyst)
+  res$cutoff_foxa2 = res$cutoff_otsu_cyst_foxa2
+  res$cutoff_pax6 = res$cutoff_otsu_cyst_pax6
+  
+  plot(res$cutoff_foxa2, res$cutoff_pax6)
+  
+  plot(res$cyst_size, res$pct_foxa2)
+  abline(v = c(5000, 10000), lwd = 2.0, col = 'red')
+  
+  
+  hist(res$cutoff_otsu_cyst_foxa2, breaks = 40)
+  abline(v = c(600, 1200), lwd = 2.0, col = 'red')
+  
+  res = res[which(res$cutoff_foxa2 > 600 & res$cutoff_foxa2 < 1200), ]
+  
+  plot(res$cyst_size, res$pct_foxa2)
+  abline(v = c(5000, 10000), lwd = 2.0, col = 'red')
+  
+  hist(res$cutoff_pax6, breaks = 40)
+  abline(v = c(1500, 5500), lwd = 2.0, col = 'red')
+  
+  res = res[which(res$cutoff_pax6 > 1500 & res$cutoff_foxa2 < 5500), ]
+  
+  plot(res$cyst_size, res$pct_foxa2)
+  abline(v = c(5000, 10000), lwd = 2.0, col = 'red')
+  
+  plot(res$cyst_size, res$pct_foxa2)
+  
+  plot(res$cyst_size, res$pct_double) ## here total is the number of FoxA2+, Pax6+ and FoxA2+&Pax6+ 
+  abline(a = 0, b = 0.5, lwd = 2.0, col = 'red')
+  
+  res = res[which(res$cyst_size > 10000), ]
+  
+  plot(density(res$pct_foxa2, adjust = 1.2), col = 'darkgreen', lwd = 3.0,  xlim = c(0, 1), ylim=c(0, 3.5))
+  abline(v = 0.3, lwd = 2.0)
+  
+  
+}else{
+  
+  res$pct_foxa2 = res$pct_foxa2_mean
+  res$pct_double = res$nb_double_mean_cyst/(res$nb_foxa2_mean_cyst + res$nb_pax6_mean_cyst + 
+                                              res$nb_double_mean_cyst)
+  
+  res$cutoff_foxa2 = res$cutoff_mean_cyst_foxa2
+  res$cutoff_pax6 = res$cutoff_mean_cyst_pax6
+  
+  plot(res$cyst_size, res$pct_foxa2)
+  abline(v = c(5000, 10000), lwd = 2.0, col = 'red')
+  
+  res = res[which(res$cyst_size > 10000), ]
+  
+  plot(res$cyst_size, res$pct_foxa2)
+  abline(v = c(5000, 10000), lwd = 2.0, col = 'red')
+  
+  kk = which(res$pct_foxa2 < 0.2)
+  plot(res$cutoff_foxa2, res$cutoff_pax6)
+  abline(v = c(450, 1000), lwd = 2.0, col = 'red')
+  abline(h = c(2500, 5000), lwd = 2.0, col = 'red')
+  points(res$cutoff_foxa2[kk], res$cutoff_pax6[kk], col = 'orange', pch = 16)
+  
+  hist(res$cutoff_otsu_cyst_foxa2, breaks = 40)
+  abline(v = c(500, 1200), lwd = 2.0, col = 'red')
+  
+  plot(res$cyst_size, res$pct_foxa2)
+  kk = which(res$cutoff_foxa2 < 450 | res$cutoff_foxa2 > 1000 | res$cutoff_pax6 < 2500 | res$cutoff_pax6 > 5000)
+  points(res$cyst_size[kk], res$pct_foxa2[kk], pch = 16, col = 'red')
+  
+  res = res[which(res$cutoff_foxa2 > 450 & res$cutoff_foxa2 < 1000 & res$cutoff_pax6 > 2500 & res$cutoff_pax6 < 5000), ]
+  
+  # plot(res$cyst_size, res$pct_foxa2)
+  # abline(v = c(5000, 10000), lwd = 2.0, col = 'red')
+  # 
+  # hist(res$cutoff_pax6, breaks = 40)
+  # abline(v = c(1500, 5000), lwd = 2.0, col = 'red')
+  # 
+  # res = res[which(res$cutoff_pax6 > 1500 & res$cutoff_foxa2 < 5000), ]
+  # 
+  # plot(res$cyst_size, res$pct_foxa2)
+  # abline(v = c(5000, 10000), lwd = 2.0, col = 'red')
+  # 
+  plot(res$cyst_size, res$pct_foxa2)
+  
+  plot(res$cyst_size, res$pct_double) ## here total is the number of FoxA2+, Pax6+ and FoxA2+&Pax6+ 
+  abline(a = 0, b = 0.5, lwd = 2.0, col = 'red')
+  
+  plot(density(res$pct_foxa2, adjust = 1.5), col = 'darkgreen', lwd = 3.0,  xlim = c(0, 1), ylim=c(0, 6))
+  abline(v = 0.28, lwd = 2.0)
+  
+  df = data.frame(pct = res$pct_foxa2, condition = rep('wt', nrow(res)))
+  
+  ggplot(df, aes(x=pct, fill = condition)) +
+    geom_density(alpha=0.7, adjust = 1.5) + 
+    xlim(0, 1) + 
+    scale_fill_manual(values=c("darkgreen")) + 
+    xlab("% FoxA2+ ") + 
+    ylab("Density") + 
+    theme_bw() +  
+    theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+          axis.text.y = element_text(angle = 0, size = 14)) +
+    theme(legend.key = element_blank()) + 
+    theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+    theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+    theme(legend.title = element_blank(), 
+          legend.text = element_text(size = 14))
+  
+  ggsave(filename = paste0(outDir, 'RA_WT_day4_FoxA2pct_thresholdMean.pdf'), height = 6, width = 6)
+  
+  
+}
 
-res = res[which(res$cyst_size > 10000), ]
+
+hist(res$pct_double, breaks = 40)
+res = res[which(res$pct_double <0.3), ]
 
 hist(res$pct_foxa2, breaks = 20)
 plot(density(res$pct_foxa2, adjust = 1.5))
+
 
 xx = log10(res$cyst_size[which(res$cyst_size>10^4)])
 hist(xx,  probability = TRUE)
@@ -64,29 +171,34 @@ lines(density(xx), lwd = 2, col = "chocolate3")
 rd = rnorm(n = 500, mean = mean(xx), sd = sd(xx))
 lines(density(rd), lwd = 2, col = "red")
 
+nb_cyst = 5000;
+
 set.seed(2025)
 a = mean(xx)/log10(200)
-rd2 = rnorm(n = 10000, mean = mean(xx)/a, sd = sd(xx)/a)
+rd2 = rnorm(n = nb_cyst, mean = mean(xx)/a, sd = sd(xx)/a)
 rd2 = 10^rd2
-hist(rd2, breaks = 20)
+rd_size = floor(rd2)
+hist(rd_size, breaks = 20)
 
-
-rd2 = floor(rd2)
+set.seed(2025)
+rd_cells = rep(0, sum(rd_size))
+rd_cells[sample(c(1:length(rd_cells)), size = floor(length(rd_cells)*0.3), replace = FALSE)] = 1
 
 pct = c()
-pct2 = c()
-set.seed(2025)
-for(size in rd2)
+
+for(size in rd_size)
 {
-  prob = runif(n = 1, min = 0, max = 1);
-  pct = c(pct, rbinom(n = 1, size = size, prob = prob)/size)
-  pct2 = c(pct2, rbinom(n = 1, size = size, prob = 0.3)/size)
+  #prob = runif(n = 1, min = 0, max = 1);
+  #pct = c(pct, rbinom(n = 1, size = size, prob = prob)/size)
+  #pct2 = c(pct2, rbinom(n = 1, size = size, prob = 0.3)/size)
+  cyst = rd_cells[1:size]
+  rd_cells = rd_cells[-c(1:size)]
+  pct = c(pct, sum(cyst)/length(cyst))
   
 }
 
 
-
-plot(density(res$pct_foxa2, adjust = 1.5), col = 'darkgreen', lwd = 3.0,  xlim = c(0, 1), ylim=c(0, 4))
+plot(density(res$pct_foxa2, adjust = 1.5), col = 'darkgreen', lwd = 3.0,  xlim = c(0, 1), ylim=c(0, 12))
 lines(density(pct, adjust = 1.2), col = 'black', lwd = 2.0)
 #lines(density(pct2), col = 'darkorange', lwd = 2.0)
 
@@ -167,72 +279,103 @@ res$treatment = sapply(res$image, function(x){unlist(strsplit(x, '_'))[5]})
 res$time = sapply(res$image, function(x){unlist(strsplit(x, '_'))[3]})
 res$time = gsub('-2umZ','', res$time)
 
-#res = res[which(res$time == 'd4' & res$treatment == 'RA'), ]
-res = res[which(res$treatment == 'RA'), ]
+#res = res[which(res$time == 'd4'), ]
+res = res[which(res$time == 'd4' & res$treatment == 'RA'), ]
+#res = res[which(res$treatment == 'RA'), ]
 
 res$genotype_pct_pxko = res$nb_pxko/res$genotype_total
+
 res$pct_foxa2 = (res$fxko_nb_foxa2+res$pxko_nb_foxa2)/res$genotype_total*2
+
+res$pct_foxa22 = (res$fxko_nb_foxa2+res$pxko_nb_foxa2)/(res$fxko_nb_foxa2+res$pxko_nb_foxa2 + 
+                                                          res$fxko_nb_pax6+res$pxko_nb_pax6)
+
+res$pct_foxa2_fxko = res$fxko_nb_foxa2/res$nb_fxko
+res$pct_pax6_pxko = res$pxko_nb_pax6/res$nb_pxko
+
 
 ## size filtering 
 hist(log10(res$cyst_size), breaks = 50)
 
-
 res = res[which(res$cyst_size > 10^4), ]
 
-plot(res$cutoff_foxa2, res$cutoff_pax6)
+plot(res$cutoff_foxa2, res$cutoff_pax6, xlim = c(0, 2), ylim = c(0, 2))
+#jj = which(res$treatment == 'noRA')
+#points(res$cutoff_foxa2[jj], res$cutoff_pax6[jj], col = 'red')
 abline(v = 0.25, col = 'red')
 abline(h = 0.25, col = 'red')
 
+res = res[which(res$cutoff_foxa2 < 2), ]
+
 hist(res$cutoff_foxa2, breaks = 40)
 abline(v = c(0.25, 1.7), lwd = 2.0, col = 'red')
-res = res[which(res$cutoff_foxa2 > 0.2 & res$cutoff_foxa2 < 1.7), ]
+
+res = res[which(res$cutoff_foxa2 > 0.25 & res$cutoff_foxa2 < 1.7), ]
 
 plot(res$genotype_pct_pxko, res$pct_foxa2)
+abline(0, 1, lwd = 2.0, col = 'red')
+
+plot(res$genotype_pct_pxko, res$pct_foxa22)
 abline(0, 1, lwd = 2.0, col = 'red')
 
 hist(res$cutoff_pax6, breaks = 40)
 abline(v = c(0.25, 1.2), lwd = 2.0, col = 'red')
-res = res[which(res$cutoff_foxa2 < 1.2 & res$cutoff_pax6 > 0.25), ]
 
-plot(res$genotype_pct_pxko, res$pct_foxa2)
+res = res[which(res$cutoff_pax6 > 0.25 & res$cutoff_foxa2 < 1.0), ]
+
+#plot(res$genotype_pct_pxko, res$pct_foxa2)
+#abline(0, 1, lwd = 2.0, col = 'red')
+
+plot(res$genotype_pct_pxko, res$pct_foxa22)
 abline(0, 1, lwd = 2.0, col = 'red')
+
+hist(res$pct_foxa2_fxko, breaks = 40)
+
+res = res[which(res$pct_foxa2_fxko < 0.05), ] 
+
+plot(res$genotype_pct_pxko, res$pct_foxa22)
+abline(0, 1, lwd = 2.0, col = 'red')
+
+hist(res$pct_pax6_pxko, breaks = 40)
+
+res = res[which(res$pct_pax6_pxko < 0.15), ]
 
 
 hist(res$cutoff_wt, breaks = 40)
 abline(v = c(0.1, 1.5), lwd = 2.0, col = 'red')
 res = res[which(res$cutoff_wt > 0.1 & res$cutoff_foxa2 < 1.5), ]
 
-plot(res$genotype_pct_pxko, res$pct_foxa2)
+plot(res$genotype_pct_pxko, res$pct_foxa22)
 abline(0, 1, lwd = 2.0, col = 'red')
 
 hist(res$cutoff_ko, breaks = 20)
 abline(v = c(0.2, 0.9), lwd = 2.0, col = 'red')
 
-res = res[which(res$cutoff_ko < 0.9), ]
+#res = res[which(res$cutoff_ko < 0.9), ]
 
 
 plot(res$genotype_pct_pxko, res$pct_foxa2)
 abline(0, 1, lwd = 2.0, col = 'red')
 
 # Add regression lines
-ggplot(res, aes(x=genotype_pct_pxko, y=pct_foxa2, color=time, shape=time)) +
-  geom_point() + 
-  geom_smooth(method=lm, aes(fill=time))+
-  ylab("% FoxA2+ ") + 
-  xlab("genotype % Pax6-/-") + 
-  theme_bw() +  
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
-  theme(legend.key = element_blank()) + 
-  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
-  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
-  theme(legend.title = element_blank(), 
-        legend.text = element_text(size = 14))
-
-ggsave(filename = paste0(outDir, 'RA_WT_KO_KO_day3_4_6_FoxA2pct.pdf'), height = 6, width = 10)
-
-res = res[which(res$time == 'd4'), ]
-ggplot(res, aes(x=genotype_pct_pxko, y=pct_foxa2)) +
+# ggplot(res, aes(x=genotype_pct_pxko, y=pct_foxa2, color=time, shape=time)) +
+#   geom_point() + 
+#   geom_smooth(method=lm, aes(fill=time))+
+#   ylab("% FoxA2+ ") + 
+#   xlab("genotype % Pax6-/-") + 
+#   theme_bw() +  
+#   theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+#         axis.text.y = element_text(angle = 0, size = 12)) +
+#   theme(legend.key = element_blank()) + 
+#   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+#   #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+#   theme(legend.title = element_blank(), 
+#         legend.text = element_text(size = 14))
+# 
+# ggsave(filename = paste0(outDir, 'RA_WT_KO_KO_day3_4_6_FoxA2pct.pdf'), height = 6, width = 10)
+# 
+# res = res[which(res$time == 'd4'), ]
+ggplot(res, aes(x=genotype_pct_pxko, y=pct_foxa22)) +
   geom_point() + 
   geom_smooth(method=lm) +
   ylab("% FoxA2+ ") + 
@@ -246,7 +389,7 @@ ggplot(res, aes(x=genotype_pct_pxko, y=pct_foxa2)) +
   theme(legend.title = element_blank(), 
         legend.text = element_text(size = 14))
 
-ggsave(filename = paste0(outDir, 'RA_WT_KO_KO_day4_FoxA2pct.pdf'), height = 6, width = 10)
+ggsave(filename = paste0(outDir, 'RA_WT_KO_KO_day4_FoxA2pct_final.pdf'), height = 6, width = 10)
 
 
 ##########################################
@@ -254,7 +397,7 @@ ggsave(filename = paste0(outDir, 'RA_WT_KO_KO_day4_FoxA2pct.pdf'), height = 6, w
 ##########################################
 res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
                              "PKO_FKO_d6_stain_DVpatterning/",
-                             "cyst_size_genotype_FoxA2_markers_cystThresholds_noMarkerNormalization.csv"), 
+                             "cyst_size_genotype_FoxA2_markers_cystThresholds_normalization_quantiles_thresholdOtsu.csv"), 
                header = TRUE, row.names = c(1))
 
 res$treatment = sapply(res$image, function(x){unlist(strsplit(x, '_'))[5]})
@@ -263,89 +406,125 @@ res$time = gsub('-2umZ','', res$time)
 res$marker = sapply(res$image, function(x){unlist(strsplit(x, '_'))[6]})
 res$marker = gsub('FA2-', '', res$marker)
 
-res$genotype_pct_pxko = res$nb_pxko/res$genotype_total
-res$pct_foxa2 = (res$nb_foxa2_fxko + res$nb_foxa2_pxko)/res$genotype_total
-res$pct_marker = (res$nb_marker_fxko + res$nb_marker_pxko)/res$genotype_total
+res$genotype_pct_cyst = res$nb_pxko_cyst/(res$nb_pxko_cyst + res$nb_fxko_cyst)
+res$genotype_pct = res$nb_pxko_global/(res$nb_pxko_global + res$nb_fxko_global)
+#res$pct_foxa2 = (res$nb_foxa2_fxko + res$nb_foxa2_pxko)/res$genotype_total
+#res$pct_marker = (res$nb_marker_fxko + res$nb_marker_pxko)/res$genotype_total
 
-res$pct_foxa2_cyst = res$nb_foxa2_cyst/res$cyst_size
-res$pct_marker_cyst = res$nb_marker_cyst/res$cyst_size
+#res$pct_foxa2_cyst = res$nb_foxa2_cyst/res$cyst_size
+res$pct_marker_cyst = res$nb_pax6_cyst/res$cyst_size
+res$pct_marker = res$nb_pax6_global/res$cyst_size
 
-res$pct_foxa2_global = res$nb_foxa2_cyst_cutoffImage/res$cyst_size
-res$pct_marker_global = res$nb_marker_cyst_cutoffImage/res$cyst_size
-
-plot(res$pct_foxa2, res$pct_foxa2_cyst)
-
-plot(res$pct_foxa2_global, res$pct_foxa2_cyst)
-abline(0, 1, lwd =2.0, col = 'red')
-
-plot(res$pct_foxa2, res$pct_foxa2_global)
-abline(0, 1, lwd =2.0, col = 'red')
-
-saveRDS(res, file = paste0(outDir, 'res_FXKO_PXKO_day6_DVpatterning_all_nomarkerNormalization.rds'))
-
-kk = which(res$treatment == 'RA')
-#res = res[which(res$time == 'd4' & res$treatment == 'RA'), ]
-res = res[kk, ]
+table(res$treatment, res$marker)
+#res$pct_foxa2_global = res$nb_foxa2_global/res$cyst_size
+#res$pct_marker_global = res$/res$cyst_size
 
 
 ## size filtering 
 hist(log10(res$cyst_size), breaks = 50)
-abline(v = c(4, 5.5), col = 'red')
+abline(v = c(3.5, 5.5), col = 'red')
 
-res = res[which(res$cyst_size > 10^4 & res$cyst_size < 10^5.5), ]
+res = res[which(res$cyst_size > 10^3.5 & res$cyst_size < 10^5.5), ]
+
+table(res$treatment, res$marker)
 
 saveRDS(res, file = paste0(outDir, 'res_FXKO_PXKO_day6_DVpatterning_sizeFiltering.rds'))
 
-plot(res$genotype_pct_pxko, res$pct_foxa2)
-abline(0, 1, lwd = 2.0, col = 'red')
-
-plot(res$cutoff_foxa2, res$cutoff_marker)
-abline(v = 0.25, col = 'red')
-abline(v = 1.5, col = 'red')
-
-hist(res$cutoff_foxa2, breaks = 40)
-abline(v = c(1.5, 8), lwd = 2.0, col = 'red')
-
-res = res[which(res$cutoff_foxa2 > 1.5 & res$cutoff_foxa2 < 8), ]
-
-plot(res$genotype_pct_pxko, res$pct_foxa2)
-abline(0, 1, lwd = 2.0, col = 'red')
-
-hist(res$cutoff_marker, breaks = 40)
-abline(v = c(0.25, 1.2), lwd = 2.0, col = 'red')
-res = res[which(res$cutoff_marker < 2.0), ]
-
-plot(res$genotype_pct_pxko, res$pct_foxa2)
-abline(0, 1, lwd = 2.0, col = 'red')
-
-
-hist(res$cutoff_fxko, breaks = 40)
-abline(v = c(0.2, 2), lwd = 2.0, col = 'red')
-
-res = res[which(res$cutoff_fxko > 0.2 & res$cutoff_fxko < 2.0), ]
-
-plot(res$genotype_pct_pxko, res$pct_foxa2)
-abline(0, 1, lwd = 2.0, col = 'red')
-
-hist(res$cutoff_pxko, breaks = 40)
-abline(v = c(0.2, 4.2), lwd = 2.0, col = 'red')
+## filtering for genotype quantification
+res = readRDS(file = paste0(outDir, 'res_FXKO_PXKO_day6_DVpatterning_sizeFiltering.rds'))
 
 plot(res$cutoff_fxko, res$cutoff_pxko)
-res = res[which(res$cutoff_pxko < 4.2), ]
+kk = which(res$treatment == 'noRA')
+points(res$cutoff_fxko[kk], res$cutoff_pxko[kk], col = 'red')
+abline(v =c(3), col = 'red')
+abline(h =c(6), col = 'red')
 
-res$pct_foxa2_false = res$nb_foxa2_fxko/res$nb_fxko
+hist(res$cutoff_fxko, breaks = 100)
+abline(v =c(2.5), col = 'red')
 
-hist(res$pct_foxa2_false, breaks = 50)
-abline(v = c(0.1, 0.05), lwd = 2.0, col = 'red')
-#hist(res$cutoff_fxko, breaks = 20)
+hist(res$cutoff_pxko, breaks = 200)
+abline(v =c(6), col = 'red')
 
-res = res[which(res$pct_foxa2_false < 0.05), ]
+jj = which(res$cutoff_fxko < 3 &  res$cutoff_pxko <6)
 
-plot(res$genotype_pct_pxko, res$pct_foxa2)
-abline(0, 1, lwd = 2.0, col = 'red')
+res = res[jj, ]
 
+saveRDS(res, file = paste0(outDir, 'res_FXKO_PXKO_day6_DVpatterning_filtering_size_genotype.rds'))
+
+### consider separate marker Olig2
+res = readRDS(file = paste0(outDir, 'res_FXKO_PXKO_day6_DVpatterning_filtering_size_genotype.rds'))
+res = res[which(res$marker == "Og2"), ]
+
+rownames(res) = paste0(res$image, '_', res$cyst_index)
+
+xx = readRDS(file = paste0(outDir, 'res_FXKO_PXKO_day6_DVpatterning_filtering_size_genotype_otsu.rds'))
+rownames(xx) = paste0(xx$image, '_', xx$cyst_index)
+
+xx = xx[match(rownames(res), rownames(xx)), ]
+
+res$genotype_pct_cyst = xx$genotype_pct_cyst
+
+jj2 = which(res$treatment == 'RA')
+jj3 = which(res$treatment == 'noRA')
+
+plot(res$genotype_pct_cyst[jj2], res$pct_marker_cyst[jj2])
+abline(h =c(0.2), col = 'red')
+points(res$genotype_pct_cyst[jj3], res$pct_marker_cyst[jj3], pch = 16, col = 'red')
+
+plot(res$genotype_pct[jj2], res$pct_marker[jj2], ylim = range(res$pct_marker))
+abline(h =c(0.2), col = 'red')
+points(res$genotype_pct[jj3], res$pct_marker[jj3], pch = 16, col = 'red')
+
+
+
+
+hist(res$pct_marker_cyst[jj3], breaks = 20)
+
+df = data.frame(cutoff = res$cutoff_pax6, condition = res$treatment)
+ggplot(df, aes(x=cutoff, fill=condition)) +
+  geom_histogram(alpha = 0.7, position = 'identity') + 
+  #geom_histogram(alpha=0.7, adjust = 1.5) +
+  scale_fill_manual(values=c("darkgreen", "#999999")) + 
+  xlab("% FoxA2+ ") + 
+  ylab("Density") + 
+  theme_bw() +  
+  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+### marker NKX22
+res = readRDS(file = paste0(outDir, 'res_FXKO_PXKO_day6_DVpatterning_filtering_size_genotype_otsu.rds'))
+
+res = res[which(res$marker == "N22"), ]
+
+jj2 = which(res$treatment == 'RA')
+jj3 = which(res$treatment == 'noRA')
+
+plot(res$genotype_pct_cyst, res$pct_marker_cyst)
+points(res$genotype_pct_cyst[jj3], res$pct_marker_cyst[jj3], pch = 16, col = 'red')
+abline(h =c(0.15), col = 'red')
+
+
+### Marker Nkx61
+res = readRDS(file = paste0(outDir, 'res_FXKO_PXKO_day6_DVpatterning_filtering_size_genotype_otsu.rds'))
+
+res = res[which(res$marker == "N61"), ]
+
+jj2 = which(res$treatment == 'RA')
+jj3 = which(res$treatment == 'noRA')
+
+plot(res$genotype_pct_cyst, res$pct_marker_cyst)
+points(res$genotype_pct_cyst[jj3], res$pct_marker_cyst[jj3], pch = 16, col = 'red')
+abline(h =c(0.15), col = 'red')
+
+
+#aa = res[which(res$treatment == 'RA'), ]
 ## plot the pct FoxA2 in function of genotype pct
-ggplot(res, aes(x=genotype_pct_pxko, y=pct_foxa2)) +
+ggplot(aa, aes(x=genotype_pct, y=pct_marker_cyst, color = marker)) +
   geom_point() + 
   geom_smooth(method=lm) +
   ylab("% FoxA2+ ") + 
@@ -512,6 +691,7 @@ ggplot(aa, aes(x=genotype_pct_pxko, y=pct_marker,  shape=treatment)) +
 
 ggsave(filename = paste0(outDir, 'PXKO_FXKO_day6_Olig2pct_genotype_RA.pdf'), height = 6, width = 10)
 
+
 ########################################################
 ########################################################
 # Section III TetOn-FoxA2-TetOnPax6:
@@ -524,8 +704,17 @@ ggsave(filename = paste0(outDir, 'PXKO_FXKO_day6_Olig2pct_genotype_RA.pdf'), hei
 ##########################################
 res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
                              "TetOnF_TetOnP_chim_d3_4_5_genotype_FoxA2_Pax6/",
-                             "cyst_size_genotype_FoxA2_Pax6_cystThresholds_globalThreshold_quantile.csv"), 
+              "cyst_size_genotype_FoxA2_Pax6_cystThresholds_globalThreshold_quantile_normalization_refineGenotype_thresholdMean_v2.csv"), 
                header = TRUE, row.names = c(1))
+
+# res2 = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
+#                               "TetOnF_TetOnP_chim_d3_4_5_genotype_FoxA2_Pax6/",
+#                               "cyst_size_genotype_FoxA2_Pax6_cystThresholds_globalThreshold_quantile.csv"), 
+#                 header = TRUE, row.names = c(1))
+# 
+# rownames(res) = paste0(res$image, '_', res$cyst_index) 
+# rownames(res2) = paste0(res2$image, '_', res2$cyst_index) 
+# res2 = res2[match(rownames(res), rownames(res2)), ]
 
 res$treatment = sapply(res$image, function(x){unlist(strsplit(x, '_'))[5]})
 
@@ -542,30 +731,87 @@ res$pct_foxa2_global = (res$nb_foxa2_global)/(res$nb_foxa2_global + res$nb_pax6_
 #res$pct_foxa2_cyst2 = res$nb_foxa2_cyst/res$cyst_size
 
 res$genotype_pct_cyst = res$nb_fxko_cyst/(res$nb_fxko_cyst + res$nb_pxko_cyst)
-res$pct_foxa2_cyst = res$nb_foxa2_cyst/(res$nb_foxa2_cyst + res$nb_pax6_cyst)
+#res$genotype_pct_cyst2 = res$nb_fxko/(res$nb_fxko + res$nb_pxko) 
+res$pct_foxa2_cyst = res$nb_foxa2_cyst/(res$nb_foxa2_cyst + res$nb_pax6_cyst + res$nb_double_cyst)
+res$pct_foxa2_cyst2 = (res$fxko_nb_foxa2 + res$pxko_nb_foxa2)/(res$fxko_nb_foxa2 + res$pxko_nb_foxa2 + 
+                                                                 res$fxko_nb_pax6 + res$pxko_nb_pax6)
 
+res$pct_foxa2_cyst3 = res$pct_foxa2_cyst
+kk = which(res$treatment == 'dox')
+
+xx1 = res$pxko_nb_foxa2[kk]/(res$pxko_nb_foxa2[kk] + res$pxko_nb_pax6[kk])
+hist(xx1, breaks = 100)
+
+xx2 = res$fxko_nb_foxa2[kk]/(res$fxko_nb_foxa2[kk] + res$fxko_nb_pax6[kk])
+hist(xx2, breaks = 100)
+
+res$pct_foxa2_cyst3[kk] = (res$fxko_nb_foxa2[kk])/(res$fxko_nb_foxa2[kk] + res$pxko_nb_pax6[kk])
+#res$pct_foxa2_cyst3[kk] = (res$fxko_nb_foxa2[kk])/(res$fxko_nb_foxa2[kk] + res$fxko_nb_pax6[kk] + res$pxko_nb_pax6[kk])
+#res$pct_foxa2_cyst3 = (res$fxko_nb_foxa2+res$pxko_nb_foxa2)/res$genotype_total*2
 #res$genotype_pct_pxko = res$nb_fxko/res$genotype_total
 #res$pct_foxa2 = (res$fxko_nb_foxa2+res$pxko_nb_foxa2)/res$genotype_total*2
 
 
-## select only the d4
-res = res[which(res$time == 'd4'), ]
-
-#res = res[which(res$time == 'd4' & res$treatment == 'RA'), ]
-#res = res[which(res$treatment == 'RA'), ]
+## select only the d4 and discard RAdox
+# res = res[which(res$time == 'd4' & res$treatment != "RAdox"), ]
+# rownames(res) = paste0(res$image, '_', res$cyst_index) 
+# 
+# saveRDS(res, file = paste0(outDir, 'TetOn_TetOn_genotype_FoxA2pct_Threshold_otsu.rds'))
+# 
+# res = readRDS(file = paste0(outDir, 'TetOn_TetOn_genotype_FoxA2pct_Threshold_otsu.rds'))
+# res = res[which(res$treatment != 'noRA'), ]
+# res2 = readRDS(file = paste0(outDir, 'TetOn_TetOn_genotype_FoxA2pct_Threshold_mean.rds'))
+# res2 = res2[match(rownames(res), rownames(res2)), ]
+# 
+# plot(res$genotype_pct_cyst, res2$genotype_pct_cyst);
+# abline(0, 1, lwd = 2.0, col = 'red')
+# kk = which(res$treatment == 'dox')
+# points(res$genotype_pct_cyst[kk], res2$genotype_pct_cyst[kk], col = 'darkblue')
+# 
+# plot(res$pct_foxa2_cyst3, res2$pct_foxa2_cyst3);
+# abline(0, 1, lwd = 2.0, col = 'red')
+# kk = which(res$treatment == 'dox')
+# points(res$pct_foxa2_cyst3[kk], res2$pct_foxa2_cyst3[kk], col = 'darkblue')
+# 
+# kk = which(res$treatment == 'dox')
+# 
+# res$genotype_pct_cyst[kk] = res2$genotype_pct_cyst[kk]
+# res$pct_foxa2_cyst3[kk] = res2$pct_foxa2_cyst3[kk]
 
 plot(res$genotype_pct_cyst, res$genotype_pct_global);abline(0, 1, col = 'red', lwd = 2.0)
 
-
 plot(res$pct_foxa2_cyst, res$pct_foxa2_global);abline(0, 1, col = 'red', lwd = 2.0)
-#plot(res$pct_foxa2_cyst, res$pct_foxa2_cyst2);abline(0, 1, col = 'red', lwd = 2.0)
 
-plot(res$genotype_pct_global, res$pct_foxa2_global)
+plot(res$pct_foxa2_cyst, res$pct_foxa2_cyst2);abline(0, 1, col = 'red', lwd = 2.0)
+
+plot(res$pct_foxa2_cyst2, res$pct_foxa2_cyst3);abline(0, 1, col = 'red', lwd = 2.0)
+
+plot(res$pct_foxa2_cyst, res$pct_foxa2_cyst3);abline(0, 1, col = 'red', lwd = 2.0)
+
+#plot(res$genotype_pct_cyst, res$genotype_pct_cyst2);
+#abline(0, 1, lwd = 2.0, col = 'red')
+aa = res[which(res$treatment != 'noRA'), ]
+p1 = ggplot(aa, aes(x=genotype_pct_cyst, y=pct_foxa2_cyst3, color=treatment)) +
+  geom_point() + 
+  geom_smooth(method=lm, aes(fill=treatment)) + 
+  geom_hline(yintercept=c(0.3), linetype="solid", linewidth = 1) +  
+  ylab("% FoxA2+ ") + 
+  xlab("genotype % TetOn-FoxA2") + 
+  theme_bw() +  
+  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
 
 ########################
 ## filtering steps 
 ## size filtering 
 hist(log10(res$cyst_size), breaks = 50)
+abline(v = c(3.5, 5), col = 'red', lwd = 2.0)
 
 hist(log10(res$cyst_size[which(res$treatment == 'dox')]), breaks = 100)
 
@@ -573,126 +819,65 @@ res = res[which(res$cyst_size > 10^3.5 & res$cyst_size < 10^5), ]
 
 table(res$treatment)
 
-plot(res$cutoff_fxko, res$cutoff_pxko, cex = 0.7)
-abline(v = c(150, 1400), col = 'red')
-abline(h = 1000, col = 'red')
+aa = res[which(res$treatment != 'noRA'), ]
+p2 = ggplot(aa, aes(x=genotype_pct_cyst, y=pct_foxa2_cyst3, color=treatment)) +
+  geom_point() + 
+  geom_smooth(method=lm, aes(fill=treatment))+ 
+  geom_hline(yintercept=c(0.3), linetype="solid", linewidth = 1) +  
+  ylab("% FoxA2+ ") + 
+  xlab("genotype % TetOn-FoxA2") + 
+  theme_bw() +  
+  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+p1 /p2
+
+kk1 = which(res$treatment == 'dox' & res$pct_foxa2_cyst3 > 0.75 & res$genotype_pct_cyst > 0.8)
+
+plot(res$cutoff_fxko, res$cutoff_pxko, cex = 0.7, xlim = c(0, 5), ylim = c(0, 4))
+abline(v = c(0.4, 5), col = 'red')
+abline(h = 0.2, col = 'red')
 kk = which(res$treatment == 'dox')
 points(res$cutoff_fxko[kk], res$cutoff_pxko[kk], col = 'blue', cex = 0.7)
 kk = which(res$treatment == 'noRA')
 points(res$cutoff_fxko[kk], res$cutoff_pxko[kk], col = 'red', cex = 0.7, pch =4)
+points(res$cutoff_fxko[kk1], res$cutoff_pxko[kk1], col = 'orange', cex = 1.5, pch =16)
 
-hist(res$cutoff_fxko, breaks = 100);abline(v = c(150, 1400))
-hist(res$cutoff_pxko, breaks = 100);abline(v = c(1200))
+#hist(res$cutoff_fxko, breaks = 100);abline(v = c(0.5, 5))
 
-jj1 = which(res$cutoff_fxko > 150  & res$cutoff_fxko < 1400 & res$cutoff_pxko > 1000)
-res = res[jj1, ]
+kk1 = which(res$treatment == 'dox')
+plot(res$cutoff_fxko[kk1], res$cutoff_pxko[kk1], cex = 0.7, xlim = c(0, 5), ylim = c(0, 4))
+
+jj1 = kk1[which(res$cutoff_fxko[kk1] < 4.5 & res$cutoff_pxko[kk1] <2.5)]
+
+kk2 = which(res$treatment == 'RA')
+plot(res$cutoff_fxko[kk2], res$cutoff_pxko[kk2], cex = 0.7, xlim = c(0, 5), ylim = c(0, 5))
+
+jj2 = kk2[which(res$cutoff_fxko[kk2] < 4 & res$cutoff_pxko[kk2] <4.5)]
+
+res = res[c(jj1, jj2), ]
+
+#hist(res$cutoff_fxko[)], breaks = 100);abline(v = c(0.5, 5))
+#hist(res$cutoff_fxko[which(res$treatment == 'RA')], breaks = 100);abline(v = c(0.5, 5))
+#hist(res$cutoff_pxko, breaks = 100);abline(v = c(0.4, 4))
+
+#jj1 = which(res$cutoff_fxko > 0.5  & res$cutoff_fxko < 5 & res$cutoff_pxko > 0.4 &res$cutoff_pxko < 4 )
+#res = res[jj1, ]
 table(res$treatment)
 
-plot(res$cutoff_foxa2, res$cutoff_pax6, xlim = c(0, 7000), ylim = c(0, 1500), type = 'n')
-abline(v = 1500, col = 'red')
-abline(h = 400, col = 'red')
-kk = which(res$treatment == 'noRA')
-points(res$cutoff_foxa2[kk], res$cutoff_pax6[kk], col = 'red', pch = 2)
-
-kk = which(res$treatment == 'dox')
-points(res$cutoff_foxa2[kk], res$cutoff_pax6[kk], col = 'blue', pch = 16)
-
-kk = which(res$treatment == 'RA')
-points(res$cutoff_foxa2[kk], res$cutoff_pax6[kk], col = 'orange', pch = 4)
-
-kk = which(res$treatment == 'RAdox')
-points(res$cutoff_foxa2[kk], res$cutoff_pax6[kk], col = 'green', pch = 1)
-
-
-hist(res$cutoff_foxa2[which(res$treatment == 'RA')], breaks = 40)
-abline(v = c(1000, 4000))
-
-hist(res$cutoff_foxa2[which(res$treatment == 'dox')], breaks = 40)
-abline(v = c(1000, 6000))
-
-hist(res$cutoff_pax6[which(res$treatment == 'dox')], breaks = 40)
-abline(v = c(1000, 6000))
-
-hist(res$cutoff_pax6[which(res$treatment == 'RAdox')], breaks = 40)
-abline(v = c(450, 1500))
-
-
-j1 = which(res$cutoff_foxa2 > 1000 & res$cutoff_foxa2 <4000 & res$treatment == 'RA')
-j2 = which(res$cutoff_pax6 > 450 & res$cutoff_pax6 < 1500 & res$treatment == 'RAdox')
-j3 = which(res$cutoff_foxa2 > 1000 & res$cutoff_foxa2 <6000 & res$cutoff_pax6 > 250 & res$treatment == 'dox')
-
-jj2 = c(j1, j2, j3)
-
-res =res[jj2, ]
-
 aa = res[which(res$treatment != 'noRA'), ]
-
-ggplot(aa, aes(x=genotype_pct_cyst, y=pct_foxa2_cyst, color=treatment)) +
-  geom_point() + 
-  geom_smooth(method=loess, aes(fill=treatment))+
-  ylab("% FoxA2+ ") + 
-  xlab("genotype % TetOn-FoxA2") + 
-  theme_bw() +  
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
-  theme(legend.key = element_blank()) + 
-  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
-  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
-  theme(legend.title = element_blank(), 
-        legend.text = element_text(size = 14))
-
-ggsave(filename = paste0(outDir, 'TetOnFx_TetOnPx_day4_FoxA2pct_genotypepct_v2.pdf'), height = 6, width = 10)
-
-
-
-ggplot(aa, aes(x=genotype_pct_global, y=pct_foxa2_global, color=treatment)) +
-  geom_point() + 
-  #geom_smooth(method=lm, aes(fill=treatment))+
-  geom_smooth(method=loess, aes(fill=treatment))+
-  ylab("% FoxA2+ ") + 
-  xlab("genotype % TetOn-FoxA2") + 
-  theme_bw() +  
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
-  theme(legend.key = element_blank()) + 
-  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
-  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
-  theme(legend.title = element_blank(), 
-        legend.text = element_text(size = 14))
-
-ggplot(aa, aes(x=genotype_pct_global2, y=pct_foxa2_global2, color=treatment)) +
-  geom_point() + 
-  #geom_smooth(method=lm, aes(fill=treatment))+
-  geom_smooth(method=loess, aes(fill=treatment))+
-  ylab("% FoxA2+ ") + 
-  xlab("genotype % TetOn-FoxA2") + 
-  theme_bw() +  
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
-  theme(legend.key = element_blank()) + 
-  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
-  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
-  theme(legend.title = element_blank(), 
-        legend.text = element_text(size = 14))
-
-
-
-ggsave(filename = paste0(outDir, 'TetOnFx_TetOnPx_day4_FoxA2pct_genotypepct.pdf'), height = 6, width = 10)
-
-
-
-
-
-ggsave(filename = paste0(outDir, 'TetOnFx_TetOnPx_day4_FoxA2pct_genotypepct_v2.pdf'), height = 6, width = 10)
-
-
-
-p3 = ggplot(aa, aes(x=genotype_pct_pxko, y=pct_foxa2, color=treatment)) +
+ggplot(aa, aes(x=genotype_pct_cyst, y=pct_foxa2_cyst3, color=treatment)) +
   geom_point() + 
   geom_smooth(method=lm, aes(fill=treatment))+
   ylab("% FoxA2+ ") + 
   xlab("genotype % TetOn-FoxA2") + 
   theme_bw() +  
+  geom_hline(yintercept=c(0.3), linetype="solid", linewidth = 1) +  
   theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
         axis.text.y = element_text(angle = 0, size = 12)) +
   theme(legend.key = element_blank()) + 
@@ -702,14 +887,141 @@ p3 = ggplot(aa, aes(x=genotype_pct_pxko, y=pct_foxa2, color=treatment)) +
         legend.text = element_text(size = 14))
 
 
-p1 + p2 + p3
+plot(res$cutoff_foxa2, res$cutoff_pax6, ylim = c(0, 3), xlim = c(0, 6),  type = 'n')
+#kk = which(res$treatment == 'noRA')
+#points(res$cutoff_foxa2[kk], res$cutoff_pax6[kk], col = 'red', pch = 2)
+kk = which(res$treatment == 'dox')
+points(res$cutoff_foxa2[kk], res$cutoff_pax6[kk], col = 'blue', pch = 16)
+
+kk = which(res$treatment == 'RA')
+points(res$cutoff_foxa2[kk], res$cutoff_pax6[kk], col = 'orange', pch = 4)
+abline(v = c(4.0, 1.0), col = 'red')
+abline(h = c(0.3, 2.0), col = 'red')
+
+
+kk1 = which(res$treatment == 'dox')
+plot(res$cutoff_foxa2[kk1], res$cutoff_pax6[kk1], col = 'blue', pch = 16)
+abline(v = c(0.7, 3.5))
+
+ii1 = kk1[which(res$cutoff_foxa2[kk1]< 0.7)]
+points(res$cutoff_foxa2[ii1], res$cutoff_pax6[ii1], col = 'red', pch = 4)
+
+plot(res$genotype_pct_cyst[kk1], res$pct_foxa2_cyst3[kk1])
+points(res$genotype_pct_cyst[ii1], res$pct_foxa2_cyst3[ii1], col = 'red', pch = 4)
+
+jj1 = kk1[which(res$cutoff_foxa2[kk1]> 0.7 & res$cutoff_foxa2[kk1] < 3.5)]
+
+kk2 = which(res$treatment == 'RA')
+
+plot(res$cutoff_foxa2[kk2], res$cutoff_pax6[kk2], col = 'blue', pch = 16)
+abline(v = c(1., 4))
+
+ii2 = kk2[which(res$cutoff_pax6[kk2] > 1.7)]
+points(res$cutoff_foxa2[ii2], res$cutoff_pax6[ii2], col = 'red', pch = 4)
+
+plot(res$genotype_pct_cyst[kk2], res$pct_foxa2_cyst3[kk2])
+points(res$genotype_pct_cyst[ii2], res$pct_foxa2_cyst3[ii2], col = 'red', pch = 4)
+abline(h = 0.3, lwd = 2.0, col = 'red')
+
+jj2 = kk2[which(res$cutoff_foxa2[kk2]> 1.0 & res$cutoff_foxa2[kk2] < 3.5 & res$cutoff_pax6[kk2] < 2.0)]
+
+
+res = res[c(jj1, jj2), ]
+
+# hist(res$cutoff_foxa2[which(res$treatment == 'RA')], breaks = 40)
+# abline(v = c(1000, 4000))
+# 
+# hist(res$cutoff_foxa2[which(res$treatment == 'dox')], breaks = 40)
+# abline(v = c(1000, 6000))
+# 
+# hist(res$cutoff_pax6[which(res$treatment == 'dox')], breaks = 40)
+# abline(v = c(1000, 6000))
+# 
+# #hist(res$cutoff_pax6[which(res$treatment == 'RAdox')], breaks = 40)
+# #abline(v = c(450, 1500))
+# 
+# 
+# j1 = which(res$cutoff_foxa2 > 1000 & res$cutoff_foxa2 <4000 & res$treatment == 'RA')
+# j1 = which(res$cutoff_foxa2 <3000 & res$treatment == 'RA')
+# 
+# #j2 = which(res$cutoff_pax6 > 450 & res$cutoff_pax6 < 1500 & res$treatment == 'RAdox')
+# j3 = which(res$cutoff_foxa2 > 1000 & res$cutoff_foxa2 <5000 & res$cutoff_pax6 > 450 & res$treatment == 'dox')
+# 
+# jj2 = c(j1, j3)
+# 
+# hist(res$cutoff_foxa2[which(res$treatment != 'noRA')], breaks = 40)
+# abline(v = c(1500, 5000))
+# 
+# hist(res$cutoff_pax6[which(res$treatment != 'noRA')], breaks = 40)
+# abline(v = c(400, 1200))
+
+# jj = which(res$cutoff_foxa2 < 4.0 & res$cutoff_foxa2 > 1.0 &
+#            res$cutoff_pax6 < 2.0 & res$cutoff_pax6 > 0.3)
+# 
+# res =res[jj, ]
+
+aa = res[which(res$treatment != 'noRA'), ]
+
+ggplot(aa, aes(x=genotype_pct_cyst, y=pct_foxa2_cyst3, color=treatment)) +
+  geom_point() + 
+  geom_smooth(method=lm, aes(fill=treatment))+
+  ylab("% FoxA2+ ") + 
+  xlab("genotype % TetOn-FoxA2") + 
+  geom_hline(yintercept=c(0.3), linetype="solid", linewidth = 1) +  
+  theme_bw() +  
+  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+ggsave(filename = paste0(outDir, 'TetOnFx_TetOnPx_day4_FoxA2pct_genotypepct_thresholdMean_v3.pdf'), 
+       height = 6, width = 10)
+
 
 ##########################################
 # d6 stain patterning (markers SHH, NKX22) 
 ##########################################
+
+## test manually specify global throsholds
+aa = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
+                            "TetOnF_TetOnP_chim_d6_genotype_stainDVpatterning/",
+                            "image_gloablThresholds_multiotsu_Nkx_Shh.csv"), 
+              header = TRUE, row.names = c(1))
+
+aa = aa[, c(1, 3, 5, 6, 8, 10, 11)]
+
+cutoff_nkx = c()
+for(n in 1:nrow(aa))
+{
+  cuts = as.numeric(aa[n, c(2:4)])
+  diff = abs(cuts - 1.0)
+  cutoff_nkx = c(cutoff_nkx, cuts[which.min(diff)])
+}
+
+aa = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
+                            "TetOnF_TetOnP_chim_d6_genotype_stainDVpatterning/",
+                            "image_gloablThresholds_multiotsu_Nkx_ShhfilteringLargeValues.csv"), 
+              header = TRUE, row.names = c(1))
+
+aa = aa[, c(1,  8, 10, 11)]
+
+cutoff_shh = c()
+for(n in 1:nrow(aa))
+{
+  cuts = as.numeric(aa[n, c(2:4)])
+  diff = abs(cuts - 1.25)
+  cutoff_shh = c(cutoff_shh, cuts[which.min(diff)])
+}
+
+
+
+
 res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
                              "TetOnF_TetOnP_chim_d6_genotype_stainDVpatterning/",
-                             "cyst_size_genotype_Nkx22_Shh_cystThresholds_globalThreshold_quantile95.csv"), 
+                             "cyst_size_genotype_cyst_Nkx22_Shh_image.csv"), 
                header = TRUE, row.names = c(1))
 
 res$treatment = sapply(res$image, function(x){unlist(strsplit(x, '_'))[5]})
@@ -717,26 +1029,187 @@ res$treatment = sapply(res$image, function(x){unlist(strsplit(x, '_'))[5]})
 res$time = sapply(res$image, function(x){unlist(strsplit(x, '_'))[3]})
 res$time = gsub('-Nk22-Shh','', res$time)
 
-res$genotype_pct_global = res$nb_fxko_global/(res$nb_fxko_global + res$nb_pxko_global)
-res$genotype_pct_global2 = res$nb_fxko_global/res$cyst_size
-
-res$genotype_pct_cyst = res$nb_fxko_cyst/(res$nb_fxko_cyst + res$nb_pxko_cyst)
-res$genotype_pct_cyst2 = res$nb_fxko_cyst/res$cyst_size
-
-
-res$genotype_pct_pxko = res$nb_fxko/res$genotype_total
-
-res$pct_nkx22_global = res$nb_foxa2_global/res$cyst_size
-res$pct_nkx22_cyst = res$nb_foxa2_cyst/res$cyst_size
-
-res$pct_shh_global = res$nb_pax6_global/res$cyst_size
-res$pct_shh_cyst = res$nb_pax6_cyst/res$cyst_size
-
 ## size filtering 
 hist(log10(res$cyst_size), breaks = 50)
 abline(v = c(3.7, 5.5), col = 'red')
 
-res = res[which(res$cyst_size > 10^4. & res$cyst_size < 10^5.5), ]
+res = res[which(res$cyst_size > 10^4.0 & res$cyst_size < 10^5.5), ]
+
+#res = res[which(res$treatment != 'noRA'), ]
+### check the genotype
+saveRDS(res, file = paste0(outDir, 'd6_TetOn_TetOn_Shh_Nkx22_sizeFiltering.rds'))
+
+
+### check the SHH
+res = readRDS(file = paste0(outDir, 'd6_TetOn_TetOn_Shh_Nkx22_sizeFiltering.rds'))
+
+#res$genotype_pct_global = res$nb_fxko_global_otsu/(res$nb_fxko_global_otsu + res$nb_pxko_global_otsu)
+res$genotype_pct_cyst = res$nb_fxko_cyst_otsu/(res$nb_fxko_cyst_otsu + res$nb_pxko_cyst_otsu)
+#res$genotype_pct_cyst = res$nb_fxko_cyst_mean/(res$nb_fxko_cyst_mean + res$nb_pxko_cyst_mean)
+
+#res$genotype_pct_cyst = res$nb_fxko_cyst_li/(res$nb_fxko_cyst_li + res$nb_pxko_cyst_li)
+#res$genotype_pct_cyst = res$nb_fxko_cyst_yen/(res$nb_fxko_cyst_yen + res$nb_pxko_cyst_yen)
+#res$genotype_pct_cyst = res$nb_fxko_cyst_isodata/(res$nb_fxko_cyst_isodata + res$nb_pxko_cyst_isodata)
+
+
+#res$pct_nkx22_cyst = res$nb_foxa2_cyst/res$cyst_size
+#res$pct_shh_global = res$nb_shh_global_multiotsu/res$cyst_size
+#res$pct_shh_cyst = res$nb_shh_cyst_otsu/res$cyst_size
+
+res$pct_shh_global = res$nb_shh_global_multiotsu/res$cyst_size
+res$pct_nkx22_global = res$nb_nkx_global_multiotsu/res$cyst_size
+
+res$pct_shh_global_2 = res$nb_shh_fxko/res$nb_total_genotype
+res$pct_nkx22_global_2 = res$nb_nkx_fxko/res$nb_total_genotype
+
+#res$pct_shh_global = res$nb_shh_global_isodata/res$cyst_size
+#res$pct_nkx22_global = res$nb_nkx_global_isodata/res$cyst_size
+
+## filtering the genotype pct
+jj1 = which(res$treatment != 'noRA')
+res = res[jj1, ]
+
+plot((res$cutoff_fxko_cyst_otsu/res$cutoff_fxko_global_otsu), 
+     (res$cutoff_pxko_cyst_otsu/res$cutoff_pxko_global_otsu))
+jj1 = which(res$treatment == 'noRA')
+points(res$cutoff_fxko_cyst_otsu[jj1]/res$cutoff_fxko_global_otsu[jj1], 
+       res$cutoff_pxko_cyst_otsu[jj1]/res$cutoff_pxko_global_otsu[jj1], col = 'red', pch = 2)
+
+abline(v = 2.1)
+abline(h = 1.7)
+
+res$outliers = FALSE
+res$outliers[which(res$cutoff_fxko_cyst_otsu/res$cutoff_fxko_global_otsu > 2.1 |
+                     res$cutoff_pxko_cyst_otsu/res$cutoff_pxko_global_otsu > 1.7)] = TRUE
+
+res = res[!res$outliers, ]
+
+plot(res$cutoff_fxko_cyst_otsu, res$cutoff_pxko_cyst_otsu)
+jj1 = which(res$treatment == 'dox')
+points(res$cutoff_fxko_cyst_otsu[jj1], res$cutoff_pxko_cyst_otsu[jj1], col = 'red', pch = 2)
+
+jj1 = which(res$treatment == 'RA')
+points(res$cutoff_fxko_cyst_otsu[jj1], res$cutoff_pxko_cyst_otsu[jj1], col = 'blue', pch = 2)
+
+
+saveRDS(res, file = paste0(outDir, 'd6_TetOn_TetOn_Shh_Nkx22_Filtering_size_genotype.rds'))
+
+jj1 = which(res$treatment == 'dox')
+res = res[jj1, ]
+res$pct_shh_false = res$nb_shh_pxko/res$nb_pxko_cyst_otsu
+res$pct_nkx_false = res$nb_nkx_pxko/res$nb_pxko_cyst_otsu
+
+plot(res$genotype_pct_cyst, res$pct_shh_false)
+
+res$outliers = FALSE
+res$outliers[which(res$cutoff_fxko_cyst_otsu/res$cutoff_fxko_global_otsu > 2.1 |
+                     res$cutoff_pxko_cyst_otsu/res$cutoff_pxko_global_otsu > 1.7)] = TRUE
+
+res = res[!res$outliers, ]
+
+
+
+### check the SHH
+res = readRDS(file = paste0(outDir, 'd6_TetOn_TetOn_Shh_Nkx22_Filtering_size_genotype.rds'))
+
+jj1 = which(res$treatment == 'dox')
+res = res[jj1, ]
+plot(res$cutoff_fxko_cyst_otsu, res$cutoff_pxko_cyst_otsu)
+
+
+
+## filtering the shh
+jj1 = which(res$treatment != 'noRA')
+res = res[jj1, ]
+
+plot(res$cutoff_shh_global_multiotsu, res$cutoff_nkx_global_multiotsu, xlim = c(0, 3), ylim = c(0, 3))
+
+cutoff_shh =  (res$cutoff_shh_global_multiotsu[match(unique(res$image), res$image)])
+#cutoff_shh = cutoff[which(cutoff_shh < 2)]
+
+cutoff_nkx =  (res$cutoff_nkx_global_multiotsu[match(unique(res$image), res$image)])
+
+
+# fit = lm(res$cutoff_pax6[jj1] ~ res$cutoff_foxa2[jj1])
+# 
+# jj1 = which(res$treatment == 'RA')
+# points(res$cutoff_foxa2[jj1], res$cutoff_pax6[jj1], col = 'darkblue', pch = 2)
+# 
+# abline(fit$coefficients, lwd = 2.0)
+# abline()
+
+res = res[which(res$treatment != "noRA"), ]
+p1 = ggplot(res, aes(x=genotype_pct_cyst, y = pct_shh_global, color = treatment, fill=treatment)) +
+  geom_point(size = 2.5) + 
+  geom_smooth(method=loess, aes(fill=treatment))+
+  ylab("% Shh+ ") + 
+  xlab("genotype % FoxA2-TetOn") + 
+  #ylim(0, 0.5) +  
+  theme_bw() +  
+  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+p2 = ggplot(res, aes(x=genotype_pct_cyst, y = pct_nkx22_global, color = treatment, fill=treatment)) +
+  geom_point(size = 2.5) + 
+  geom_smooth(method=loess, aes(fill=treatment))+
+  ylab("% Nkx2.2 ") + 
+  xlab("genotype % FoxA2-TetOn") + 
+  #xlim(0, 2) +  
+  theme_bw() +  
+  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+p1 / p2
+
+
+p1 = ggplot(res, aes(x=genotype_pct_cyst, y = pct_shh_global_2, color = treatment, fill=treatment)) +
+  geom_point(size = 2.5) + 
+  geom_smooth(method=loess, aes(fill=treatment))+
+  ylab("% Shh+ ") + 
+  xlab("genotype % FoxA2-TetOn") + 
+  #ylim(0, 0.5) +  
+  theme_bw() +  
+  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+p2 = ggplot(res, aes(x=genotype_pct_cyst, y = pct_nkx22_global_2, color = treatment, fill=treatment)) +
+  geom_point(size = 2.5) + 
+  geom_smooth(method=loess, aes(fill=treatment))+
+  ylab("% Nkx2.2 ") + 
+  xlab("genotype % FoxA2-TetOn") + 
+  #xlim(0, 2) +  
+  theme_bw() +  
+  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+p1 / p2
+
+
+
+
+
+
+
 
 ## filtering 
 plot((res$nb_fxko_global + res$nb_pxko_global), res$cyst_size, log = 'xy')
@@ -752,11 +1225,10 @@ abline(0, 1, lwd =2.0, col = 'red')
 plot(res$pct_shh_global, res$pct_shh_cyst)
 abline(0, 1, lwd =2.0, col = 'red')
 
-
 plot(res$genotype_pct_global, res$genotype_pct_cyst)
 abline(0, 1, lwd =2.0, col = 'red')
 
-ggplot(res, aes(x=quantile95_pax6, fill=treatment)) +
+ggplot(res, aes(x=qua, fill=treatment)) +
   geom_histogram(alpha = 0.5, position = 'identity') + 
   #geom_histogram(alpha=0.7, adjust = 1.5) +
   #scale_fill_manual(values=c("darkgreen", "#999999")) + 
@@ -1082,5 +1554,120 @@ ggsave(filename = paste0(outDir, 'PXKO_FXKO_day6_Olig2pct_genotype_RA.pdf'), hei
 
 
 
+########################################################
+########################################################
+# Section IV : WT_FoxA2 chimeras and WT_Pax6 chimeras
+# Fig 4B
+########################################################
+########################################################
+res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
+                             "FoxAKO_WTchim_d4/",
+                             "cyst_size_genotype_FoxA2_Pax6_cystThresholds_test_otsuThresholdGenotype_meanThresholdFoxA2_originalGenetype_Normallization_v6.csv"), 
+               header = TRUE, row.names = c(1))
 
+res$pct_foxa2 = res$nb_foxa2/(res$nb_foxa2 + res$nb_pax6)
+
+plot(res$pct_ko, res$pct_foxa2)
+
+
+## size filtering 
+hist(log10(res$cyst_size), breaks = 50)
+
+res = res[which(res$cyst_size > 10^4), ]
+plot(res$pct_ko, res$pct_foxa2)
+
+plot(res$cutoff_wt, res$cutoff_ko)
+abline(v = 17)
+abline(h = 3.5)
+
+
+res = res[which(res$cutoff_wt < 17 & res$cutoff_ko <3.5), ]
+
+plot(res$pct_ko, res$pct_foxa2)
+
+plot(res$cutoff_foxa2, res$cutoff_pax6)
+abline(v = 17)
+abline(h = 3.5)
+
+plot(res$pct_ko, res$pct_foxa2)
+jj1 = which(res$cutoff_foxa2 > 6)
+points(res$pct_ko[jj1], res$pct_foxa2[jj1], pch = 16, col = 'red')
+
+res = res[which(res$cutoff_foxa2 < 6), ]
+
+plot(res$pct_ko, (res$nb_foxa2 + res$nb_pax6))
+
+
+ggplot(res, aes(x=pct_ko, y=pct_foxa2)) +
+  geom_point() + 
+  geom_smooth(method=loess) +
+  ylab("% FoxA2+ in WT ") + 
+  xlab("genotype % FoxA2-/-") + 
+  theme_bw() +  
+  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+ggsave(filename = paste0(outDir, 'FoxA2KO_WTchimeras_day4.pdf'), height = 6, width = 10)
+
+
+##########################################
+# Pax6KO-WT chimeras
+##########################################
+res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
+                             "Pax6KO_WTchim_d4/",
+                             "cyst_size_genotype_FoxA2_Pax6_cystThresholds_testMeanThreshodling_v2.csv"), 
+               header = TRUE, row.names = c(1))
+
+#res$pct_foxa2 = res$nb_foxa2/(res$nb_foxa2 + res$nb_pax6)
+res$pct_ko = 1.0- res$pct_wt 
+plot(res$pct_ko, res$pct_foxa2)
+
+
+## size filtering 
+hist(log10(res$cyst_size), breaks = 50)
+
+res = res[which(res$cyst_size > 10^4), ]
+plot(res$pct_ko, res$pct_foxa2)
+
+plot(res$cutoff_wt, res$cutoff_ko, log = 'xy')
+abline(v = 20)
+abline(h = 4)
+
+
+res = res[which(res$cutoff_wt < 20 & res$cutoff_ko < 4 & res$cutoff_wt > 1.5), ]
+
+plot(res$pct_ko, res$pct_foxa2)
+
+plot(res$cutoff_foxa2, res$cutoff_pax6, log = '')
+abline(v = 17)
+abline(h = 3.5)
+
+plot(res$pct_ko, res$pct_foxa2)
+jj1 = which(res$cutoff_foxa2 > 6)
+points(res$pct_ko[jj1], res$pct_foxa2[jj1], pch = 16, col = 'red')
+
+#res = res[which(res$cutoff_foxa2 < 4 & res$cutoff_foxa2 > 0.5 & res$cutoff_pax6 > 1 & res$cutoff_pax6 <3.5), ]
+
+#plot(res$pct_ko, (res$nb_foxa2 + res$nb_pax6))
+
+ggplot(res, aes(x=pct_ko, y=pct_foxa2)) +
+  geom_point() + 
+  geom_smooth(method=loess) +
+  ylab("% FoxA2+ in WT ") + 
+  xlab("genotype % Pax6-/-") + 
+  theme_bw() +  
+  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+ggsave(filename = paste0(outDir, 'PAX6KO_WTchimeras_day4.pdf'), height = 6, width = 10)
 
