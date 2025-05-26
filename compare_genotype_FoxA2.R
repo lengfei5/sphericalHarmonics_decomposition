@@ -397,7 +397,7 @@ ggsave(filename = paste0(outDir, 'RA_WT_KO_KO_day4_FoxA2pct_final.pdf'), height 
 ##########################################
 res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
                              "PKO_FKO_d6_stain_DVpatterning/",
-                             "cyst_size_genotype_FoxA2_markers_cystThresholds_normalization_quantiles_thresholdOtsu.csv"), 
+                             "cyst_size_genotype_FoxA2_markers_genotype_FoxA_ostu_markerMultiotsu_manualOlig2global.csv"), 
                header = TRUE, row.names = c(1))
 
 res$treatment = sapply(res$image, function(x){unlist(strsplit(x, '_'))[5]})
@@ -418,6 +418,7 @@ res$pct_marker = res$nb_pax6_global/res$cyst_size
 table(res$treatment, res$marker)
 #res$pct_foxa2_global = res$nb_foxa2_global/res$cyst_size
 #res$pct_marker_global = res$/res$cyst_size
+
 
 
 ## size filtering 
@@ -453,48 +454,95 @@ saveRDS(res, file = paste0(outDir, 'res_FXKO_PXKO_day6_DVpatterning_filtering_si
 
 ### consider separate marker Olig2
 res = readRDS(file = paste0(outDir, 'res_FXKO_PXKO_day6_DVpatterning_filtering_size_genotype.rds'))
+
 res = res[which(res$marker == "Og2"), ]
 
-rownames(res) = paste0(res$image, '_', res$cyst_index)
+aa = res[which(res$marker == "Og2" & res$treatment == 'RA'), ]
 
-xx = readRDS(file = paste0(outDir, 'res_FXKO_PXKO_day6_DVpatterning_filtering_size_genotype_otsu.rds'))
-rownames(xx) = paste0(xx$image, '_', xx$cyst_index)
-
-xx = xx[match(rownames(res), rownames(xx)), ]
-
-res$genotype_pct_cyst = xx$genotype_pct_cyst
-
-jj2 = which(res$treatment == 'RA')
-jj3 = which(res$treatment == 'noRA')
-
-plot(res$genotype_pct_cyst[jj2], res$pct_marker_cyst[jj2])
-abline(h =c(0.2), col = 'red')
-points(res$genotype_pct_cyst[jj3], res$pct_marker_cyst[jj3], pch = 16, col = 'red')
-
-plot(res$genotype_pct[jj2], res$pct_marker[jj2], ylim = range(res$pct_marker))
-abline(h =c(0.2), col = 'red')
-points(res$genotype_pct[jj3], res$pct_marker[jj3], pch = 16, col = 'red')
-
-
-
-
-hist(res$pct_marker_cyst[jj3], breaks = 20)
-
-df = data.frame(cutoff = res$cutoff_pax6, condition = res$treatment)
-ggplot(df, aes(x=cutoff, fill=condition)) +
-  geom_histogram(alpha = 0.7, position = 'identity') + 
-  #geom_histogram(alpha=0.7, adjust = 1.5) +
-  scale_fill_manual(values=c("darkgreen", "#999999")) + 
-  xlab("% FoxA2+ ") + 
-  ylab("Density") + 
+ggplot(res, aes(x=genotype_pct_cyst, y=pct_marker, color = treatment)) +
+  geom_point() + 
+  #geom_smooth(method=lm) +
+  ylab("% Marker+ ") + 
+  xlab("genotype % Pax6-/-") + 
+  geom_hline(yintercept=0.03, linetype="dashed", color = "red") + 
   theme_bw() +  
   theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
         axis.text.y = element_text(angle = 0, size = 12)) +
   theme(legend.key = element_blank()) + 
   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
-  theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
   theme(legend.title = element_blank(), 
         legend.text = element_text(size = 14))
+
+hist(res$pct_marker[which(res$treatment == 'noRA')], breaks = 50)
+
+df = c()
+cutoffs = seq(0, 1, by = 0.2)
+for(n in 1:(length(cutoffs)-1))
+{
+  index_group = which(res$treatment == 'RA'& res$genotype_pct_cyst >=cutoffs[n] & res$genotype_pct_cyst < cutoffs[n+1])
+  df = c(df, length(which(res$pct_marker[index_group] > 0.03))/length(index_group))
+}
+
+df = data.frame(group = c('WT',  '0-20%', '20-40%', '40-60%', '60-80%', '80-100%'), 
+                pct_cystOlig2 = c(0.6733333, df))
+
+df$group = factor(df$group, levels = c('WT',  '0-20%', '20-40%', '40-60%', '60-80%', '80-100%'))
+
+ggplot(data=df, aes(x=group, y=pct_cystOlig2, fill=group)) +
+  geom_bar(stat="identity")+
+  #theme_minimal() +
+  ylab("% cyst with Olig2") + 
+  xlab("% genotype Pax6-/-") +
+  ylim(0, 0.7) + 
+  #geom_hline(yintercept=0.25, linetype="dashed", color = "red") + 
+  theme_bw() +  
+  scale_fill_manual(values=c("darkgreen", rep("steelblue", 5))) +
+  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+ggsave(filename = paste0(outDir, 'RA_KOKO_day6_DVpatterning_Olig2_vsWT.pdf'), height = 6, width = 8)
+
+
+####### quantifying the Olig2 in WT with RA
+res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
+                             "WT_d6_stain_DVpatterning/",
+                             "WT_d6_cyst_size_manualOlig2global_v2.csv"), 
+               header = TRUE, row.names = c(1))
+
+res$treatment = sapply(res$image, function(x){unlist(strsplit(x, '_'))[5]})
+#res$time = sapply(res$image, function(x){unlist(strsplit(x, '_'))[3]})
+#res$time = gsub('-2umZ','', res$time)
+#res$marker = sapply(res$image, function(x){unlist(strsplit(x, '_'))[6]})
+res$pct_marker_cyst = res$nb_marker_cyst/res$cyst_size
+res$pct_marker = res$nb_marker_global/res$cyst_size
+
+plot(res$cyst_size, res$pct_marker)
+
+## size filtering 
+hist(log10(res$cyst_size), breaks = 50)
+abline(v = c(4.0, 5.5), col = 'red')
+
+res = res[which(res$cyst_size > 10^4.0 & res$cyst_size < 10^5.), ]
+
+jj = which(res$treatment == 'NoRA')
+hist(res$pct_marker[jj], breaks = 100)
+
+
+jj2 = which(res$treatment == 'RA')
+hist(res$pct_marker)
+jj2 = which(res$treatment == 'RA')
+plot(log10(res$cyst_size[jj2]), res$pct_marker[jj2])
+
+
+length(which(res$pct_marker[jj2] > 0.005))/length(jj2)
+
+
 
 ### marker NKX22
 res = readRDS(file = paste0(outDir, 'res_FXKO_PXKO_day6_DVpatterning_filtering_size_genotype_otsu.rds'))
@@ -522,12 +570,12 @@ points(res$genotype_pct_cyst[jj3], res$pct_marker_cyst[jj3], pch = 16, col = 're
 abline(h =c(0.15), col = 'red')
 
 
-#aa = res[which(res$treatment == 'RA'), ]
+aa = res[which(res$treatment == 'RA'), ]
 ## plot the pct FoxA2 in function of genotype pct
-ggplot(aa, aes(x=genotype_pct, y=pct_marker_cyst, color = marker)) +
+ggplot(aa, aes(x=genotype_pct_cyst, y=pct_marker_cyst, color = marker)) +
   geom_point() + 
   geom_smooth(method=lm) +
-  ylab("% FoxA2+ ") + 
+  ylab("% Marker+ ") + 
   xlab("genotype % Pax6-/-") + 
   theme_bw() +  
   theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
@@ -537,6 +585,24 @@ ggplot(aa, aes(x=genotype_pct, y=pct_marker_cyst, color = marker)) +
   #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
   theme(legend.title = element_blank(), 
         legend.text = element_text(size = 14))
+
+aa = res[which(res$marker == "Og2" & res$treatment == 'RA'), ]
+
+ggplot(aa, aes(x=genotype_pct_cyst, y=pct_marker, color = marker)) +
+  geom_point() + 
+  #geom_smooth(method=lm) +
+  ylab("% Marker+ ") + 
+  xlab("genotype % Pax6-/-") + 
+  theme_bw() +  
+  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+aa$cutoff_pax6_image[match(unique(aa$image[which(aa$marker == "Og2")]), aa$image)]
 
 ggsave(filename = paste0(outDir, 'RA_WT_KO_KO_day6_DVpatterning_FoxA2pct.pdf'), height = 6, width = 10)
 
@@ -1396,163 +1462,163 @@ ggplot(aa, aes(x=genotype_pct_cyst2, y=pct_shh_cyst, color=treatment)) +
 # 
 # ggsave(filename = paste0(outDir, 'RA_WT_KO_KO_day6_DVpatterning_FoxA2pct.pdf'), height = 6, width = 10)
 
-plot(res$pct_foxa2_global, res$pct_foxa2_cyst)
-
-jj = which(res$marker == 'Og2')
-df = data.frame(cutoff = res$cutoff_marker[jj], quantile = res$quantile95_marker[jj], condition = res$treatment[jj])
-df$condition = factor(df$condition, levels = c('RA', 'noRA'))
-
-ggplot(df, aes(x=cutoff, fill=condition)) +
-  geom_histogram(alpha = 0.7, position = 'identity') + 
-  #geom_histogram(alpha=0.7, adjust = 1.5) +
-  scale_fill_manual(values=c("darkgreen", "#999999")) + 
-  xlab("% FoxA2+ ") + 
-  ylab("Density") + 
-  theme_bw() +  
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
-  theme(legend.key = element_blank()) + 
-  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
-  theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
-  theme(legend.title = element_blank(), 
-        legend.text = element_text(size = 14))
-
-
-ggplot(df, aes(x=quantile, fill=condition)) +
-  geom_histogram(alpha = 0.7, position = 'identity') + 
-  #geom_histogram(alpha=0.7, adjust = 1.5) +
-  scale_fill_manual(values=c("darkgreen", "#999999")) + 
-  xlab("% FoxA2+ ") + 
-  ylab("Density") + 
-  theme_bw() +  
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
-  theme(legend.key = element_blank()) + 
-  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
-  theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
-  theme(legend.title = element_blank(), 
-        legend.text = element_text(size = 14))
-
-abline(v = c(1.5, 2.5), lwd = 2.0, col = 'red')
-
-
-kk1 = which(res$marker == 'Og2' & res$treatment == 'RA' & res$cutoff_marker < 1.5)
-res$pct_marker[kk1] = 0
-
-hist(res$cutoff_marker[which(res$marker == 'N22' & res$treatment == "noRA")], breaks = 30)
-abline(v = c(1.5, 2.5), lwd = 2.0, col = 'red')
-
-kk2 = which(res$marker == 'N22' & res$treatment == 'RA' & res$cutoff_marker < 1.0)
-res$pct_marker[kk2] = 0
-
-hist(res$cutoff_marker[which(res$marker == 'N61' & res$treatment == "noRA")], breaks = 30)
-abline(v = c(1.5, 2.5), lwd = 2.0, col = 'red')
-
-kk2 = which(res$marker == 'N22' & res$treatment == 'RA' & res$cutoff_marker < 1.0)
-res$pct_marker[kk2] = 0
-
-res = res[which(res$treatment == 'RA'), ]
-
-#jj = which(res$marker == 'Og2')
-#plot(res$cutoff_marker[jj], res$pct_marker[jj])
-
-
-
-aa = res
-
-# Add regression lines
-ggplot(aa, aes(x=genotype_pct_global, y=pct_shh_global, color=treatment)) +
-  geom_point(size = 2.5) + 
-  #geom_smooth(method=lm, aes(fill=marker))+
-  ylab("% marker+ ") + 
-  xlab("genotype % Pax6-/-") + 
-  #xlim(0, 2) +  
-  theme_bw() +  
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
-  theme(legend.key = element_blank()) + 
-  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
-  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
-  theme(legend.title = element_blank(), 
-        legend.text = element_text(size = 14))
-
-ggplot(aa, aes(x=genotype_pct_cyst, y=pct_shh_cyst, color=treatment)) +
-  geom_point(size = 2.5) + 
-  #geom_smooth(method=lm, aes(fill=marker))+
-  ylab("% marker+ ") + 
-  xlab("genotype % Pax6-/-") + 
-  #xlim(0, 2) +  
-  theme_bw() +  
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
-  theme(legend.key = element_blank()) + 
-  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
-  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
-  theme(legend.title = element_blank(), 
-        legend.text = element_text(size = 14))
-#res = res[which(res$pct_marker >0), ]
-
-
-
-
-# Add regression lines
-ggplot(aa, aes(x=genotype_pct_pxko, y=pct_marker, color=treatment, shape=marker)) +
-  geom_point(size = 2.5) + 
-  #geom_smooth(method=lm, aes(fill=marker))+
-  ylab("% marker+ ") + 
-  xlab("genotype % Pax6-/-") + 
-  #xlim(0, 2) +  
-  theme_bw() +  
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
-  theme(legend.key = element_blank()) + 
-  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
-  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
-  theme(legend.title = element_blank(), 
-        legend.text = element_text(size = 14))
-
-ggsave(filename = paste0(outDir, 'PXKO_FXKO_day6_Olig2pct_genotype_RA.noRA.pdf'), height = 6, width = 10)
-
-jj = which(res$marker == 'Og2' & res$treatment == 'RA')
-aa = res[jj, ]
-
-ggplot(aa, aes(x=genotype_pct_pxko, y=pct_marker_cyst, color = cutoff_marker,   shape=treatment)) +
-  geom_point(size = 2.5) + 
-  geom_smooth(method=lm, aes(fill=marker))+
-  ylab("% marker+ ") + 
-  xlab("genotype % Pax6-/-") + 
-  #xlim(0, 2) +  
-  theme_bw() +  
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
-  theme(legend.key = element_blank()) + 
-  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
-  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
-  theme(legend.title = element_blank(), 
-        legend.text = element_text(size = 14))
-
-jj = which(res$marker == 'Og2' & res$treatment == 'RA' & res$cutoff_marker > 170)
-aa = res[jj, ]
-
-
-ggplot(aa, aes(x=genotype_pct_pxko, y=pct_marker,  shape=treatment)) +
-  geom_point(size = 2.5) + 
-  geom_smooth(method=lm, aes(fill=marker))+
-  ylab("% marker+ ") + 
-  xlab("genotype % Pax6-/-") + 
-  #xlim(0, 2) +  
-  theme_bw() +  
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
-  theme(legend.key = element_blank()) + 
-  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
-  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
-  theme(legend.title = element_blank(), 
-        legend.text = element_text(size = 14))
-
-ggsave(filename = paste0(outDir, 'PXKO_FXKO_day6_Olig2pct_genotype_RA.pdf'), height = 6, width = 10)
-
-
+# plot(res$pct_foxa2_global, res$pct_foxa2_cyst)
+# 
+# jj = which(res$marker == 'Og2')
+# df = data.frame(cutoff = res$cutoff_marker[jj], quantile = res$quantile95_marker[jj], condition = res$treatment[jj])
+# df$condition = factor(df$condition, levels = c('RA', 'noRA'))
+# 
+# ggplot(df, aes(x=cutoff, fill=condition)) +
+#   geom_histogram(alpha = 0.7, position = 'identity') + 
+#   #geom_histogram(alpha=0.7, adjust = 1.5) +
+#   scale_fill_manual(values=c("darkgreen", "#999999")) + 
+#   xlab("% FoxA2+ ") + 
+#   ylab("Density") + 
+#   theme_bw() +  
+#   theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+#         axis.text.y = element_text(angle = 0, size = 12)) +
+#   theme(legend.key = element_blank()) + 
+#   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+#   theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+#   theme(legend.title = element_blank(), 
+#         legend.text = element_text(size = 14))
+# 
+# 
+# ggplot(df, aes(x=quantile, fill=condition)) +
+#   geom_histogram(alpha = 0.7, position = 'identity') + 
+#   #geom_histogram(alpha=0.7, adjust = 1.5) +
+#   scale_fill_manual(values=c("darkgreen", "#999999")) + 
+#   xlab("% FoxA2+ ") + 
+#   ylab("Density") + 
+#   theme_bw() +  
+#   theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+#         axis.text.y = element_text(angle = 0, size = 12)) +
+#   theme(legend.key = element_blank()) + 
+#   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+#   theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+#   theme(legend.title = element_blank(), 
+#         legend.text = element_text(size = 14))
+# 
+# abline(v = c(1.5, 2.5), lwd = 2.0, col = 'red')
+# 
+# 
+# kk1 = which(res$marker == 'Og2' & res$treatment == 'RA' & res$cutoff_marker < 1.5)
+# res$pct_marker[kk1] = 0
+# 
+# hist(res$cutoff_marker[which(res$marker == 'N22' & res$treatment == "noRA")], breaks = 30)
+# abline(v = c(1.5, 2.5), lwd = 2.0, col = 'red')
+# 
+# kk2 = which(res$marker == 'N22' & res$treatment == 'RA' & res$cutoff_marker < 1.0)
+# res$pct_marker[kk2] = 0
+# 
+# hist(res$cutoff_marker[which(res$marker == 'N61' & res$treatment == "noRA")], breaks = 30)
+# abline(v = c(1.5, 2.5), lwd = 2.0, col = 'red')
+# 
+# kk2 = which(res$marker == 'N22' & res$treatment == 'RA' & res$cutoff_marker < 1.0)
+# res$pct_marker[kk2] = 0
+# 
+# res = res[which(res$treatment == 'RA'), ]
+# 
+# #jj = which(res$marker == 'Og2')
+# #plot(res$cutoff_marker[jj], res$pct_marker[jj])
+# 
+# 
+# 
+# aa = res
+# 
+# # Add regression lines
+# ggplot(aa, aes(x=genotype_pct_global, y=pct_shh_global, color=treatment)) +
+#   geom_point(size = 2.5) + 
+#   #geom_smooth(method=lm, aes(fill=marker))+
+#   ylab("% marker+ ") + 
+#   xlab("genotype % Pax6-/-") + 
+#   #xlim(0, 2) +  
+#   theme_bw() +  
+#   theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+#         axis.text.y = element_text(angle = 0, size = 12)) +
+#   theme(legend.key = element_blank()) + 
+#   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+#   #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+#   theme(legend.title = element_blank(), 
+#         legend.text = element_text(size = 14))
+# 
+# ggplot(aa, aes(x=genotype_pct_cyst, y=pct_shh_cyst, color=treatment)) +
+#   geom_point(size = 2.5) + 
+#   #geom_smooth(method=lm, aes(fill=marker))+
+#   ylab("% marker+ ") + 
+#   xlab("genotype % Pax6-/-") + 
+#   #xlim(0, 2) +  
+#   theme_bw() +  
+#   theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+#         axis.text.y = element_text(angle = 0, size = 12)) +
+#   theme(legend.key = element_blank()) + 
+#   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+#   #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+#   theme(legend.title = element_blank(), 
+#         legend.text = element_text(size = 14))
+# #res = res[which(res$pct_marker >0), ]
+# 
+# 
+# 
+# 
+# # Add regression lines
+# ggplot(aa, aes(x=genotype_pct_pxko, y=pct_marker, color=treatment, shape=marker)) +
+#   geom_point(size = 2.5) + 
+#   #geom_smooth(method=lm, aes(fill=marker))+
+#   ylab("% marker+ ") + 
+#   xlab("genotype % Pax6-/-") + 
+#   #xlim(0, 2) +  
+#   theme_bw() +  
+#   theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+#         axis.text.y = element_text(angle = 0, size = 12)) +
+#   theme(legend.key = element_blank()) + 
+#   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+#   #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+#   theme(legend.title = element_blank(), 
+#         legend.text = element_text(size = 14))
+# 
+# ggsave(filename = paste0(outDir, 'PXKO_FXKO_day6_Olig2pct_genotype_RA.noRA.pdf'), height = 6, width = 10)
+# 
+# jj = which(res$marker == 'Og2' & res$treatment == 'RA')
+# aa = res[jj, ]
+# 
+# ggplot(aa, aes(x=genotype_pct_pxko, y=pct_marker_cyst, color = cutoff_marker,   shape=treatment)) +
+#   geom_point(size = 2.5) + 
+#   geom_smooth(method=lm, aes(fill=marker))+
+#   ylab("% marker+ ") + 
+#   xlab("genotype % Pax6-/-") + 
+#   #xlim(0, 2) +  
+#   theme_bw() +  
+#   theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+#         axis.text.y = element_text(angle = 0, size = 12)) +
+#   theme(legend.key = element_blank()) + 
+#   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+#   #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+#   theme(legend.title = element_blank(), 
+#         legend.text = element_text(size = 14))
+# 
+# jj = which(res$marker == 'Og2' & res$treatment == 'RA' & res$cutoff_marker > 170)
+# aa = res[jj, ]
+# 
+# 
+# ggplot(aa, aes(x=genotype_pct_pxko, y=pct_marker,  shape=treatment)) +
+#   geom_point(size = 2.5) + 
+#   geom_smooth(method=lm, aes(fill=marker))+
+#   ylab("% marker+ ") + 
+#   xlab("genotype % Pax6-/-") + 
+#   #xlim(0, 2) +  
+#   theme_bw() +  
+#   theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
+#         axis.text.y = element_text(angle = 0, size = 12)) +
+#   theme(legend.key = element_blank()) + 
+#   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+#   #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+#   theme(legend.title = element_blank(), 
+#         legend.text = element_text(size = 14))
+# 
+# ggsave(filename = paste0(outDir, 'PXKO_FXKO_day6_Olig2pct_genotype_RA.pdf'), height = 6, width = 10)
+# 
+# 
 
 ########################################################
 ########################################################
@@ -1564,6 +1630,7 @@ res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/proje
                              "FoxAKO_WTchim_d4/",
                              "cyst_size_genotype_FoxA2_Pax6_cystThresholds_test_otsuThresholdGenotype_meanThresholdFoxA2_originalGenetype_Normallization_v6.csv"), 
                header = TRUE, row.names = c(1))
+
 
 res$pct_foxa2 = res$nb_foxa2/(res$nb_foxa2 + res$nb_pax6)
 
@@ -1622,6 +1689,27 @@ res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/proje
                              "Pax6KO_WTchim_d4/",
                              "cyst_size_genotype_FoxA2_Pax6_cystThresholds_testMeanThreshodling_v2.csv"), 
                header = TRUE, row.names = c(1))
+
+xx = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
+                            "Pax6KO_WTchim_d4/",
+                            "cyst_size_genotype_FoxA2_Pax6_cystThresholds_testMeanThreshodling_test_jetraw_compression.csv"), 
+              header = TRUE, row.names = c(1))
+
+rownames(res) = paste0(res$image, "_", res$cyst_index)
+rownames(xx) = paste0(xx$image, "_", xx$cyst_index)
+
+xx = xx[match(rownames(res), rownames(xx)), ]
+
+
+plot(res$cyst_size, xx$cyst_size, xlab = 'original', ylab = 'compressed', main = 'cyst size')
+abline(0, 1, col = 'red', lwd =2.0)
+
+plot(res$pct_wt, xx$pct_wt, xlab = 'original', ylab = 'compressed', main = '% of wt genotype')
+abline(0, 1, col = 'red', lwd =2.0)
+
+plot(res$pct_foxa2, xx$pct_foxa2, xlab = 'original', ylab = 'compressed', main = '% of FoxA2+')
+abline(0, 1, col = 'red', lwd =2.0)
+
 
 #res$pct_foxa2 = res$nb_foxa2/(res$nb_foxa2 + res$nb_pax6)
 res$pct_ko = 1.0- res$pct_wt 
