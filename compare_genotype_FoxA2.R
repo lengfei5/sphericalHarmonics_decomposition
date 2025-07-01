@@ -1050,47 +1050,14 @@ ggsave(filename = paste0(outDir, 'TetOnFx_TetOnPx_day4_FoxA2pct_genotypepct_thre
 ##########################################
 # d6 stain patterning (markers SHH, NKX22) 
 ##########################################
-
-# ## test manually specify global throsholds
-# aa = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
-#                             "TetOnF_TetOnP_chim_d6_genotype_stainDVpatterning/",
-#                             "image_gloablThresholds_multiotsu_Nkx_Shh.csv"), 
-#               header = TRUE, row.names = c(1))
-# 
-# aa = aa[, c(1, 3, 5, 6, 8, 10, 11)]
-# 
-# cutoff_nkx = c()
-# for(n in 1:nrow(aa))
-# {
-#   cuts = as.numeric(aa[n, c(2:4)])
-#   diff = abs(cuts - 1.0)
-#   cutoff_nkx = c(cutoff_nkx, cuts[which.min(diff)])
-# }
-# 
-# aa = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
-#                             "TetOnF_TetOnP_chim_d6_genotype_stainDVpatterning/",
-#                             "image_gloablThresholds_multiotsu_Nkx_ShhfilteringLargeValues.csv"), 
-#               header = TRUE, row.names = c(1))
-# 
-# aa = aa[, c(1,  8, 10, 11)]
-# 
-# cutoff_shh = c()
-# for(n in 1:nrow(aa))
-# {
-#   cuts = as.numeric(aa[n, c(2:4)])
-#   diff = abs(cuts - 1.25)
-#   cutoff_shh = c(cutoff_shh, cuts[which.min(diff)])
-# }
-# 
-# 
-
 res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
                              "TetOnF_TetOnP_chim_d6_genotype_stainDVpatterning/",
                              #"cyst_size_genotype_Nkx22_Shh_global_manual.csv"),
-                             "cyst_size_genotype_cyst_Nkx22_Shh_image_manualThresholds.csv"),
+                             #"cyst_size_genotype_cyst_Nkx22_Shh_image_manualThresholds.csv"),
                              # "cyst_size_genotype_cyst_Nkx22_Shh_image_manualThresholds_v2.csv"), 
                              #"cyst_size_genotype_cyst_Nkx22_Shh_image_manualThresholds_shh250_v3.csv"),
                              #"cyst_size_genotype_cyst_Nkx22_Shh_image_manualThresholds_shh225_v4.csv"), 
+                             "cyst_size_genotype_cystThresholdsMultiple_Nkx22_Shh_image_manualThresholds_shh300_nkx1000_v5.csv"), 
                header = TRUE, row.names = c(1))
 
 res$treatment = sapply(res$image, function(x){unlist(strsplit(x, '_'))[5]})
@@ -1112,12 +1079,14 @@ length(which(res$nb_nkx_global_multiotsu[jj]>0))/length(jj)
 #res$pct_shh_genotype = res$nb_shh_genotype/(res$nb_total_genotype)
 #res$pct_shh_fx = res$nb_shh_fxko/res$nb_total_fxko
 
-res$genotype_pct_cyst = res$nb_fxko_cyst_otsu/(res$nb_fxko_cyst_otsu + res$nb_pxko_cyst_otsu)
+res$genotype_pct_otsu = res$nb_fxko_cyst_otsu/(res$nb_fxko_cyst_otsu + res$nb_pxko_cyst_otsu)
+res$genotype_pct_mean = res$nb_fxko_cyst_mean/(res$nb_fxko_cyst_mean + res$nb_pxko_cyst_mean)
+res$genotype_pct_li = res$nb_fxko_cyst_li/(res$nb_fxko_cyst_li + res$nb_pxko_cyst_li)
 #res$genotype_pct_cyst2 = res$nb_total_fxko/(res$nb_total_fxko + res$nb_total_pxko)
 #res$genotype_pct_cyst = res$nb_fxko_cyst_mean/(res$nb_fxko_cyst_mean + res$nb_pxko_cyst_mean)
 
 res$pct_shh_global = res$nb_shh_global_multiotsu/res$cyst_size
-
+res$pct_nkx_global = res$nb_nkx_global_multiotsu/res$cyst_size
 
 
 res$treatment = factor(res$treatment, levels = c('noRA', 'dox', 'RA'))
@@ -1140,15 +1109,12 @@ res = res[which(res$cyst_size > 10^3.5 & res$cyst_size < 10^5.5), ]
 #res$genotype_pct_cyst = res$nb_fxko_cyst_yen/(res$nb_fxko_cyst_yen + res$nb_pxko_cyst_yen)
 #res$genotype_pct_cyst = res$nb_fxko_cyst_isodata/(res$nb_fxko_cyst_isodata + res$nb_pxko_cyst_isodata)
 
-
 #res$pct_nkx22_cyst = res$nb_foxa2_cyst/res$cyst_size
 #res$pct_shh_global = res$nb_shh_global_multiotsu/res$cyst_size
 #res$pct_shh_cyst = res$nb_shh_cyst_otsu/res$cyst_size
 
-
-
 #res$pct_shh_cyst = res$nb_shh_cyst_otsu/res$cyst_size
-
+res$genotype_pct_cyst = res$nb_fxko_cyst_mean/(res$nb_fxko_cyst_mean + res$nb_pxko_cyst_mean)
 ggplot(res, aes(x=genotype_pct_cyst, y=pct_shh_global, color = treatment, fill=treatment)) +
   geom_point() + 
   #geom_smooth(method=lm) +
@@ -1164,11 +1130,11 @@ ggplot(res, aes(x=genotype_pct_cyst, y=pct_shh_global, color = treatment, fill=t
   theme(legend.title = element_blank(), 
         legend.text = element_text(size = 14))
 
-ggplot(res, aes(x=nb_total_fxko, y=nb_shh_fxko, color = treatment, fill=treatment)) +
+ggplot(res, aes(x=genotype_pct_cyst, y=pct_nkx_global, color = treatment, fill=treatment)) +
   geom_point() + 
   #geom_smooth(method=lm) +
   ylab("% Marker+ ") + 
-  xlab("genotype % Pax6-/-") + 
+  xlab("genotype % FoxA2 TetOn") + 
   geom_hline(yintercept=0.03, linetype="dashed", color = "red") + 
   theme_bw() +  
   theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
@@ -1178,6 +1144,7 @@ ggplot(res, aes(x=nb_total_fxko, y=nb_shh_fxko, color = treatment, fill=treatmen
   #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
   theme(legend.title = element_blank(), 
         legend.text = element_text(size = 14))
+
 
 #res$pct_shh_genotype = res$nb_shh_fxko/res$nb_total_fxko
 
@@ -1551,7 +1518,8 @@ ggsave(filename = paste0(outDir, 'PAX6KO_WTchimeras_day4_compressedVerion.pdf'),
 ##########################################
 res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
                              "d6_2xTetOn/",
-                             "cyst_size_NKX22_FoxA2Pax6_states_maualGlobalThreshods_v1.csv"), 
+                             #"cyst_size_NKX22_FoxA2Pax6_states_maualGlobalThreshods_v1.csv"), 
+                             "cyst_size_NKX22_FoxA2Pax6_states_maualGlobalThreshods_DAPIcounts_v2.csv"), 
                header = TRUE, row.names = c(1))
 
 res$genotype = sapply(res$image, function(x){unlist(strsplit(x, '_'))[7]})
@@ -1564,10 +1532,10 @@ res$condition = paste0(res$genotype, '_', res$treatment)
 res$total = res$nb_foxa2_pax6_pp + res$nb_foxa2_pax6_np + res$nb_foxa2_pax6_pn + res$nb_foxa2_pax6_nn
 res$pct_nkx = res$nb_global_nkx/res$cyst_size
 
-res$pct_pp = res$nb_foxa2_pax6_pp/res$cyst_size
-res$pct_pn = res$nb_foxa2_pax6_pn/res$cyst_size
-res$pct_np = res$nb_foxa2_pax6_np/res$cyst_size
-res$pct_nn = res$nb_foxa2_pax6_nn/res$cyst_size
+res$pct_pp = res$nb_foxa2_pax6_pp/res$nb_dapi_cyst_otsu
+res$pct_pn = res$nb_foxa2_pax6_pn/res$nb_dapi_cyst_otsu
+res$pct_np = res$nb_foxa2_pax6_np/res$nb_dapi_cyst_otsu
+res$pct_nn = res$nb_foxa2_pax6_nn/res$nb_dapi_cyst_otsu
 
 
 ## size filtering 
@@ -1638,6 +1606,7 @@ ggsave(filename = paste0(outDir, '2xTetOn_day6_percentages_NTOs_postiveNKX22.pdf
        width = 8, height = 5)
 
 
+
 kk_sels = match(c('condition', 'pct_pp', 'pct_pn', 'pct_np', 'pct_nn'), colnames(res))
 xx = res[, kk_sels]
 xx = xx %>%
@@ -1671,5 +1640,47 @@ ggplot(data=df, aes(x=condition, y=pct, fill=states)) +
   scale_fill_manual(values=c("darkgreen", "darkorange", "red", 'gray')) 
 
 ggsave(filename = paste0(outDir, '2xTetOn_day6_percentages_cystStates.pdf'), 
+       width = 8, height = 5)
+
+## distribution of pn states  
+cols <- c("#F76D5E", "#FFFFBF", "#72D8FF")
+
+jj = which(res$condition == 'wt_RA' | res$condition == "n26_RA" | res$condition == "n26_dox")
+ggplot(res[jj, ], aes(x=pct_pn, fill = condition)) +
+  geom_density(alpha = 0.7) +
+  scale_fill_manual(values = c("darkgreen", "green2", "#72D8FF")) +
+  ylab("Density of % FoxA2+ Pax6- ") + 
+  xlab("") + 
+  #ylim(0, 1.0) + 
+  theme_classic() +  
+  theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 14)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+ggsave(filename = paste0(outDir, '2xTetOn_day6_densityPlot_percentages_statePN.pdf'), 
+       width = 8, height = 5)
+
+
+jj = which(res$condition == 'wt_RA' | res$condition == "n26_RA" | res$condition == "n26_dox")
+ggplot(res[jj, ], aes(x=pct_np, fill = condition)) +
+  geom_density(alpha = 0.7) +
+  scale_fill_manual(values = c("darkgreen", "green2", "#72D8FF")) +
+  ylab("Density of % FoxA2+ Pax6- ") + 
+  xlab("") + 
+  #ylim(0, 1.0) + 
+  theme_classic() +  
+  theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 14)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+ggsave(filename = paste0(outDir, '2xTetOn_day6_densityPlot_percentages_stateNP.pdf'), 
        width = 8, height = 5)
 
