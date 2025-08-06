@@ -1065,57 +1065,111 @@ res$treatment = sapply(res$image, function(x){unlist(strsplit(x, '_'))[5]})
 res$time = sapply(res$image, function(x){unlist(strsplit(x, '_'))[3]})
 res$time = gsub('-Nk22-Shh','', res$time)
 
-jj = which(res$treatment == 'RA')
-length(which(res$nb_shh_global_multiotsu[jj]>0))/length(jj)
-length(which(res$nb_shh_fxko[jj]>0 | res$nb_shh_pxko[jj] > 0))/length(jj)
-
-length(which(res$nb_shh_fxko[jj]>0))/length(jj)
-
-length(which(res$nb_shh_cyst_otsu[jj]>0))/length(jj)
-
-length(which(res$nb_nkx_global_multiotsu[jj]>0))/length(jj)
-
-#res$nb_shh_genotype = res$nb_shh_fxko + res$nb_shh_pxko
-#res$pct_shh_genotype = res$nb_shh_genotype/(res$nb_total_genotype)
-#res$pct_shh_fx = res$nb_shh_fxko/res$nb_total_fxko
-
-res$genotype_pct_otsu = res$nb_fxko_cyst_otsu/(res$nb_fxko_cyst_otsu + res$nb_pxko_cyst_otsu)
-res$genotype_pct_mean = res$nb_fxko_cyst_mean/(res$nb_fxko_cyst_mean + res$nb_pxko_cyst_mean)
-res$genotype_pct_li = res$nb_fxko_cyst_li/(res$nb_fxko_cyst_li + res$nb_pxko_cyst_li)
-#res$genotype_pct_cyst2 = res$nb_total_fxko/(res$nb_total_fxko + res$nb_total_pxko)
-#res$genotype_pct_cyst = res$nb_fxko_cyst_mean/(res$nb_fxko_cyst_mean + res$nb_pxko_cyst_mean)
-
-res$pct_shh_global = res$nb_shh_global_multiotsu/res$cyst_size
-res$pct_nkx_global = res$nb_nkx_global_multiotsu/res$cyst_size
-
-
-res$treatment = factor(res$treatment, levels = c('noRA', 'dox', 'RA'))
-
-## size filtering 
+## first select the size 
 hist(log10(res$cyst_size), breaks = 50)
 abline(v = c(3.7, 5.5), col = 'red')
 
 res = res[which(res$cyst_size > 10^3.5 & res$cyst_size < 10^5.5), ]
 
-#res = res[which(res$treatment != 'noRA'), ]
-### check the genotype
-#saveRDS(res, file = paste0(outDir, 'd6_TetOn_TetOn_Shh_Nkx22_sizeFiltering.rds'))
-### check the SHH
-#res = readRDS(file = paste0(outDir, 'd6_TetOn_TetOn_Shh_Nkx22_sizeFiltering.rds'))
+## secondly use three cyst-level thresholds to determine the genotype proportions
+res$genotype_pct_otsu = res$nb_fxko_cyst_otsu/(res$nb_fxko_cyst_otsu + res$nb_pxko_cyst_otsu)
+res$genotype_pct_mean = res$nb_fxko_cyst_mean/(res$nb_fxko_cyst_mean + res$nb_pxko_cyst_mean)
+res$genotype_pct_li = res$nb_fxko_cyst_li/(res$nb_fxko_cyst_li + res$nb_pxko_cyst_li)
+#res$genotype_pct_cyst2 = res$nb_total_fxko/(res$nb_total_fxko + res$nb_total_pxko)
+#res$genotype_pct_cyst = res$nb_fxko_cyst_mean/(res$nb_fxko_cyst_mean + res$nb_pxko_cyst_mean)
+res$treatment = factor(res$treatment, levels = c('noRA', 'dox', 'RA'))
 
-#res$genotype_pct_global = res$nb_fxko_global_otsu/(res$nb_fxko_global_otsu + res$nb_pxko_global_otsu)
+library(splines)
+plot(res$genotype_pct_otsu, res$genotype_pct_li)
+abline(0, 1, lwd = 2.0, col = 'red')
 
-#res$genotype_pct_cyst = res$nb_fxko_cyst_li/(res$nb_fxko_cyst_li + res$nb_pxko_cyst_li)
-#res$genotype_pct_cyst = res$nb_fxko_cyst_yen/(res$nb_fxko_cyst_yen + res$nb_pxko_cyst_yen)
-#res$genotype_pct_cyst = res$nb_fxko_cyst_isodata/(res$nb_fxko_cyst_isodata + res$nb_pxko_cyst_isodata)
+x = res$genotype_pct_otsu
+y = res$genotype_pct_li
+plot(x, y)
+abline(0, 1, lwd = 2.0, col = 'red')
+abline(v = c(0.05, 0.95))
 
-#res$pct_nkx22_cyst = res$nb_foxa2_cyst/res$cyst_size
-#res$pct_shh_global = res$nb_shh_global_multiotsu/res$cyst_size
-#res$pct_shh_cyst = res$nb_shh_cyst_otsu/res$cyst_size
+kk = which(x > 0.05 & x < 0.95)
+plot(x[kk], y[kk])
+abline(0, 1, lwd = 2.0, col = 'red')
+abline(v = c(0.05, 0.95))
+fit = lm(y[kk] ~ ns(x[kk], df = 3))
+lines(x[kk], predict(fit), col = "blue", lwd = 1)
 
-#res$pct_shh_cyst = res$nb_shh_cyst_otsu/res$cyst_size
-res$genotype_pct_cyst = res$nb_fxko_cyst_mean/(res$nb_fxko_cyst_mean + res$nb_pxko_cyst_mean)
-ggplot(res, aes(x=genotype_pct_cyst, y=pct_shh_global, color = treatment, fill=treatment)) +
+rsds = abs(fit$residuals)
+index_rm = kk[which(rsds > 0.1)]
+
+plot(x[-index_rm], y[-index_rm])
+abline(0, 1, lwd = 2.0, col = 'red')
+abline(v = c(0.05, 0.95))
+
+res = res[-index_rm, ]
+
+plot(res$genotype_pct_otsu, res$genotype_pct_mean)
+abline(0, 1, lwd = 2.0, col = 'red')
+abline(v = c(0.05, 0.95))
+
+x = res$genotype_pct_otsu
+y = res$genotype_pct_mean
+plot(x, y)
+abline(0, 1, lwd = 2.0, col = 'red')
+abline(v = c(0.05, 0.95))
+
+kk = which(x > 0.05 & x < 0.9)
+plot(x[kk], y[kk])
+abline(0, 1, lwd = 2.0, col = 'red')
+abline(v = c(0.05, 0.95))
+fit = lm(y[kk] ~ ns(x[kk], df = 3))
+lines(x[kk], predict(fit), col = "blue")
+
+rsds = abs(fit$residuals)
+hist(fit$residuals, breaks = 50)
+
+index_rm = kk[which(rsds > 0.1)]
+
+plot(x[-index_rm], y[-index_rm])
+abline(0, 1, lwd = 2.0, col = 'red')
+abline(v = c(0.05, 0.95))
+
+res = res[-index_rm, ]
+
+plot(res$genotype_pct_li, res$genotype_pct_mean)
+abline(0, 1, lwd = 2.0, col = 'red')
+
+plot(res$genotype_pct_otsu, res$genotype_pct_mean)
+abline(0, 1, lwd = 2.0, col = 'red')
+abline(v = c(0.05, 0.95))
+
+plot(res$genotype_pct_otsu, res$genotype_pct_li)
+abline(0, 1, lwd = 2.0, col = 'red')
+
+saveRDS(res, file = paste0(outDir, 'd6_TetOn_TetOn_Shh_Nkx22_Filtering_size_pctGenotype.otsu.li.mean.rds'))
+
+
+### test SHH and NKX proportion calculation
+### here mainly testing the manually specified global thresholds for SHH and NKX22
+res = readRDS(file = paste0(outDir, 'd6_TetOn_TetOn_Shh_Nkx22_Filtering_size_pctGenotype.otsu.li.mean.rds'))
+jj = which(res$treatment == 'RA')
+length(which(res$nb_shh_global_multiotsu[jj]>0))/length(jj)
+length(which(res$nb_shh_fxko[jj]>0 | res$nb_shh_pxko[jj] > 0))/length(jj)
+
+
+length(which(res$nb_shh_fxko[jj]>0))/length(jj)
+length(which(res$nb_shh_cyst_otsu[jj]>0))/length(jj)
+
+length(which(res$nb_nkx_global_multiotsu[jj]>0))/length(jj)
+
+res$pct_shh_global = res$nb_shh_global_multiotsu/res$cyst_size
+res$pct_nkx_global = res$nb_nkx_global_multiotsu/res$cyst_size
+
+write.table(res, 
+            file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
+                   "TetOnF_TetOnP_chim_d6_genotype_stainDVpatterning/", 
+                   "d6_TetOn_TetOn_Shh_Nkx22_Filtering_size_pctGenotype.otsu.li.mean.csv"),
+            row.names = FALSE, col.names = TRUE, quote = FALSE, sep = "\t")
+
+
+ggplot(res, aes(x=genotype_pct_otsu, y=pct_shh_global, color = treatment, fill=treatment)) +
   geom_point() + 
   #geom_smooth(method=lm) +
   ylab("% Marker+ ") + 
@@ -1130,7 +1184,7 @@ ggplot(res, aes(x=genotype_pct_cyst, y=pct_shh_global, color = treatment, fill=t
   theme(legend.title = element_blank(), 
         legend.text = element_text(size = 14))
 
-ggplot(res, aes(x=genotype_pct_cyst, y=pct_nkx_global, color = treatment, fill=treatment)) +
+ggplot(res, aes(x=genotype_pct_otsu, y=pct_nkx_global, color = treatment, fill=treatment)) +
   geom_point() + 
   #geom_smooth(method=lm) +
   ylab("% Marker+ ") + 
@@ -1160,41 +1214,41 @@ ggplot(res, aes(x=genotype_pct_cyst, y=pct_nkx_global, color = treatment, fill=t
 #jj1 = which(res$treatment != 'noRA')
 #res = res[jj1, ]
 
-plot((res$cutoff_fxko_cyst_otsu/res$cutoff_fxko_global_otsu), 
-     (res$cutoff_pxko_cyst_otsu/res$cutoff_pxko_global_otsu))
-jj1 = which(res$treatment == 'noRA')
-points(res$cutoff_fxko_cyst_otsu[jj1]/res$cutoff_fxko_global_otsu[jj1], 
-       res$cutoff_pxko_cyst_otsu[jj1]/res$cutoff_pxko_global_otsu[jj1], col = 'red', pch = 2)
-
-abline(v = 2.1)
-abline(h = 1.7)
-
-res$outliers = FALSE
-res$outliers[which(res$cutoff_fxko_cyst_otsu/res$cutoff_fxko_global_otsu > 2.1 |
-                     res$cutoff_pxko_cyst_otsu/res$cutoff_pxko_global_otsu > 1.7)] = TRUE
-
-res = res[!res$outliers, ]
-
-jj = which(res$treatment == 'RA')
-length(which(res$nb_shh_global_multiotsu[jj]>0))/length(jj)
-length(which(res$pct_shh_genotype[jj]>0))/length(jj)
-
-plot(res$cutoff_fxko_cyst_otsu, res$cutoff_pxko_cyst_otsu)
-jj1 = which(res$treatment == 'dox')
-points(res$cutoff_fxko_cyst_otsu[jj1], res$cutoff_pxko_cyst_otsu[jj1], col = 'red', pch = 2)
-
-jj1 = which(res$treatment == 'RA')
-points(res$cutoff_fxko_cyst_otsu[jj1], res$cutoff_pxko_cyst_otsu[jj1], col = 'blue', pch = 2)
-
-
-res$outliers[which(res$cutoff_fxko_cyst_otsu > 1.8 |
-                      res$cutoff_pxko_cyst_otsu > 2.5)] = TRUE
- 
-res = res[!res$outliers, ]
- 
-jj = which(res$treatment == 'RA')
-length(which(res$nb_shh_global_multiotsu[jj]>0))/length(jj)
-length(which(res$nb_shh_cyst_otsu[jj]>0))/length(jj)
+# plot((res$cutoff_fxko_cyst_otsu/res$cutoff_fxko_global_otsu), 
+#      (res$cutoff_pxko_cyst_otsu/res$cutoff_pxko_global_otsu))
+# jj1 = which(res$treatment == 'noRA')
+# points(res$cutoff_fxko_cyst_otsu[jj1]/res$cutoff_fxko_global_otsu[jj1], 
+#        res$cutoff_pxko_cyst_otsu[jj1]/res$cutoff_pxko_global_otsu[jj1], col = 'red', pch = 2)
+# 
+# abline(v = 2.1)
+# abline(h = 1.7)
+# 
+# res$outliers = FALSE
+# res$outliers[which(res$cutoff_fxko_cyst_otsu/res$cutoff_fxko_global_otsu > 2.1 |
+#                      res$cutoff_pxko_cyst_otsu/res$cutoff_pxko_global_otsu > 1.7)] = TRUE
+# 
+# res = res[!res$outliers, ]
+# 
+# jj = which(res$treatment == 'RA')
+# length(which(res$nb_shh_global_multiotsu[jj]>0))/length(jj)
+# length(which(res$pct_shh_genotype[jj]>0))/length(jj)
+# 
+# plot(res$cutoff_fxko_cyst_otsu, res$cutoff_pxko_cyst_otsu)
+# jj1 = which(res$treatment == 'dox')
+# points(res$cutoff_fxko_cyst_otsu[jj1], res$cutoff_pxko_cyst_otsu[jj1], col = 'red', pch = 2)
+# 
+# jj1 = which(res$treatment == 'RA')
+# points(res$cutoff_fxko_cyst_otsu[jj1], res$cutoff_pxko_cyst_otsu[jj1], col = 'blue', pch = 2)
+# 
+# 
+# res$outliers[which(res$cutoff_fxko_cyst_otsu > 1.8 |
+#                       res$cutoff_pxko_cyst_otsu > 2.5)] = TRUE
+#  
+# res = res[!res$outliers, ]
+#  
+# jj = which(res$treatment == 'RA')
+# length(which(res$nb_shh_global_multiotsu[jj]>0))/length(jj)
+# length(which(res$nb_shh_cyst_otsu[jj]>0))/length(jj)
 
 #saveRDS(res, file = paste0(outDir, 'd6_TetOn_TetOn_Shh_Nkx22_Filtering_size_genotype.rds'))
 
@@ -1210,7 +1264,6 @@ length(which(res$nb_shh_cyst_otsu[jj]>0))/length(jj)
 #                      res$cutoff_pxko_cyst_otsu/res$cutoff_pxko_global_otsu > 1.7)] = TRUE
 # 
 # res = res[!res$outliers, ]
-
 
 
 ### check the SHH
@@ -1274,19 +1327,20 @@ abline(v = 0.01, col = 'red')
 
 res$pct_fx = res$nb_total_fxko/res$cyst_size
 res$pct_shh_global = res$nb_shh_global_multiotsu/res$nb_total_fxko
+res$genotype_pct_cyst =res$genotype_pct_mean
 
 min_pct_shh = 0.00
-min_pct_fx = 0.05
+min_pct_fx = 0.0
 
 df = c()
-cutoffs = seq(0, 1, by = 0.2)
+cutoffs = seq(0, 1, by = 0.1)
 
 for(n in 1:(length(cutoffs)-1))
 {
   # n = 1
   index_group = which(res$treatment == 'dox'& 
                         res$pct_fx >= min_pct_fx &
-                        res$genotype_pct_cyst >=cutoffs[n] & res$genotype_pct_cyst < cutoffs[n+1])
+                        res$genotype_pct_cyst >=cutoffs[n] & res$genotype_pct_cyst <= cutoffs[n+1])
   
   df = c(df, length(which(res$pct_shh_global[index_group] > min_pct_shh))/length(index_group))
   
