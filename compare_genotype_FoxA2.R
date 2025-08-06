@@ -1048,22 +1048,49 @@ ggsave(filename = paste0(outDir, 'TetOnFx_TetOnPx_day4_FoxA2pct_genotypepct_thre
 
 
 ##########################################
-# d6 stain patterning (markers SHH, NKX22) 
+## d6 stain patterning (markers SHH, NKX22)
+## after many test, the automatic thresholds did not work
+## the final analysis was done with manual scoring by Elena
 ##########################################
-res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
-                             "TetOnF_TetOnP_chim_d6_genotype_stainDVpatterning/",
-                             #"cyst_size_genotype_Nkx22_Shh_global_manual.csv"),
-                             #"cyst_size_genotype_cyst_Nkx22_Shh_image_manualThresholds.csv"),
-                             # "cyst_size_genotype_cyst_Nkx22_Shh_image_manualThresholds_v2.csv"), 
-                             #"cyst_size_genotype_cyst_Nkx22_Shh_image_manualThresholds_shh250_v3.csv"),
-                             #"cyst_size_genotype_cyst_Nkx22_Shh_image_manualThresholds_shh225_v4.csv"), 
-                             "cyst_size_genotype_cystThresholdsMultiple_Nkx22_Shh_image_manualThresholds_shh300_nkx1000_v5.csv"), 
-               header = TRUE, row.names = c(1))
+# res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
+#                              "TetOnF_TetOnP_chim_d6_genotype_stainDVpatterning/",
+#                              #"cyst_size_genotype_Nkx22_Shh_global_manual.csv"),
+#                              #"cyst_size_genotype_cyst_Nkx22_Shh_image_manualThresholds.csv"),
+#                              # "cyst_size_genotype_cyst_Nkx22_Shh_image_manualThresholds_v2.csv"), 
+#                              #"cyst_size_genotype_cyst_Nkx22_Shh_image_manualThresholds_shh250_v3.csv"),
+#                              #"cyst_size_genotype_cyst_Nkx22_Shh_image_manualThresholds_shh225_v4.csv"), 
+#                              "cyst_size_genotype_cystThresholdsMultiple_Nkx22_Shh_image_manualThresholds_shh300_nkx1000_v5.csv"), 
+#                header = TRUE, row.names = c(1))
+
+res = read.csv2(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
+                             "TetOnF_TetOnP_chim_d6_genotype_stainDVpatterning_SHH_NKX_manual/", 
+                             "d6_TetOn_TetOn_Shh_Nkx22_Filtering_size_pctGenotype.otsu.li.mean.csv"), 
+               header = TRUE, sep = "\t")
 
 res$treatment = sapply(res$image, function(x){unlist(strsplit(x, '_'))[5]})
 
 res$time = sapply(res$image, function(x){unlist(strsplit(x, '_'))[3]})
 res$time = gsub('-Nk22-Shh','', res$time)
+
+scores = readxl::read_xlsx(path = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
+                                         "TetOnF_TetOnP_chim_d6_genotype_stainDVpatterning_SHH_NKX_manual/", 
+                                         "TetOnTetOn_manual_scoring.xlsx"),
+                           sheet = 1
+                           )
+
+scores = data.frame(scores, stringsAsFactors = FALSE)
+scores$cyst = paste0(scores$image, '_', scores$cyst_index)
+
+res$cyst = paste0(res$image, '_', res$cyst_index)
+
+mm = match(res$cyst, scores$cyst)
+
+res = data.frame(res, scores[, c(1:5)])
+
+res = res[is.na(res$note), ]
+
+res = res[which(res$treatment != 'noRA'), ]
+
 
 ## first select the size 
 hist(log10(res$cyst_size), breaks = 50)
@@ -1077,64 +1104,64 @@ res$genotype_pct_mean = res$nb_fxko_cyst_mean/(res$nb_fxko_cyst_mean + res$nb_px
 res$genotype_pct_li = res$nb_fxko_cyst_li/(res$nb_fxko_cyst_li + res$nb_pxko_cyst_li)
 #res$genotype_pct_cyst2 = res$nb_total_fxko/(res$nb_total_fxko + res$nb_total_pxko)
 #res$genotype_pct_cyst = res$nb_fxko_cyst_mean/(res$nb_fxko_cyst_mean + res$nb_pxko_cyst_mean)
-res$treatment = factor(res$treatment, levels = c('noRA', 'dox', 'RA'))
+res$treatment = factor(res$treatment, levels = c('dox', 'RA'))
 
-library(splines)
-plot(res$genotype_pct_otsu, res$genotype_pct_li)
-abline(0, 1, lwd = 2.0, col = 'red')
+# library(splines)
+# plot(res$genotype_pct_otsu, res$genotype_pct_li)
+# abline(0, 1, lwd = 2.0, col = 'red')
+# 
+# x = res$genotype_pct_otsu
+# y = res$genotype_pct_li
+# plot(x, y)
+# abline(0, 1, lwd = 2.0, col = 'red')
+# abline(v = c(0.05, 0.95))
+# 
+# kk = which(x > 0.05 & x < 0.95)
+# plot(x[kk], y[kk])
+# abline(0, 1, lwd = 2.0, col = 'red')
+# abline(v = c(0.05, 0.95))
+# fit = lm(y[kk] ~ ns(x[kk], df = 3))
+# lines(x[kk], predict(fit), col = "blue", lwd = 1)
+# 
+# rsds = abs(fit$residuals)
+# index_rm = kk[which(rsds > 0.1)]
+# 
+# plot(x[-index_rm], y[-index_rm])
+# abline(0, 1, lwd = 2.0, col = 'red')
+# abline(v = c(0.05, 0.95))
+# 
+# res = res[-index_rm, ]
+# 
+# plot(res$genotype_pct_otsu, res$genotype_pct_mean)
+# abline(0, 1, lwd = 2.0, col = 'red')
+# abline(v = c(0.05, 0.95))
 
-x = res$genotype_pct_otsu
-y = res$genotype_pct_li
-plot(x, y)
-abline(0, 1, lwd = 2.0, col = 'red')
-abline(v = c(0.05, 0.95))
-
-kk = which(x > 0.05 & x < 0.95)
-plot(x[kk], y[kk])
-abline(0, 1, lwd = 2.0, col = 'red')
-abline(v = c(0.05, 0.95))
-fit = lm(y[kk] ~ ns(x[kk], df = 3))
-lines(x[kk], predict(fit), col = "blue", lwd = 1)
-
-rsds = abs(fit$residuals)
-index_rm = kk[which(rsds > 0.1)]
-
-plot(x[-index_rm], y[-index_rm])
-abline(0, 1, lwd = 2.0, col = 'red')
-abline(v = c(0.05, 0.95))
-
-res = res[-index_rm, ]
-
-plot(res$genotype_pct_otsu, res$genotype_pct_mean)
-abline(0, 1, lwd = 2.0, col = 'red')
-abline(v = c(0.05, 0.95))
-
-x = res$genotype_pct_otsu
-y = res$genotype_pct_mean
-plot(x, y)
-abline(0, 1, lwd = 2.0, col = 'red')
-abline(v = c(0.05, 0.95))
-
-kk = which(x > 0.05 & x < 0.9)
-plot(x[kk], y[kk])
-abline(0, 1, lwd = 2.0, col = 'red')
-abline(v = c(0.05, 0.95))
-fit = lm(y[kk] ~ ns(x[kk], df = 3))
-lines(x[kk], predict(fit), col = "blue")
-
-rsds = abs(fit$residuals)
-hist(fit$residuals, breaks = 50)
-
-index_rm = kk[which(rsds > 0.1)]
-
-plot(x[-index_rm], y[-index_rm])
-abline(0, 1, lwd = 2.0, col = 'red')
-abline(v = c(0.05, 0.95))
-
-res = res[-index_rm, ]
-
-plot(res$genotype_pct_li, res$genotype_pct_mean)
-abline(0, 1, lwd = 2.0, col = 'red')
+# x = res$genotype_pct_otsu
+# y = res$genotype_pct_mean
+# plot(x, y)
+# abline(0, 1, lwd = 2.0, col = 'red')
+# abline(v = c(0.05, 0.95))
+# 
+# kk = which(x > 0.05 & x < 0.9)
+# plot(x[kk], y[kk])
+# abline(0, 1, lwd = 2.0, col = 'red')
+# abline(v = c(0.05, 0.95))
+# fit = lm(y[kk] ~ ns(x[kk], df = 3))
+# lines(x[kk], predict(fit), col = "blue")
+# 
+# rsds = abs(fit$residuals)
+# hist(fit$residuals, breaks = 50)
+# 
+# index_rm = kk[which(rsds > 0.1)]
+# 
+# plot(x[-index_rm], y[-index_rm])
+# abline(0, 1, lwd = 2.0, col = 'red')
+# abline(v = c(0.05, 0.95))
+# 
+# res = res[-index_rm, ]
+# 
+# plot(res$genotype_pct_li, res$genotype_pct_mean)
+# abline(0, 1, lwd = 2.0, col = 'red')
 
 plot(res$genotype_pct_otsu, res$genotype_pct_mean)
 abline(0, 1, lwd = 2.0, col = 'red')
