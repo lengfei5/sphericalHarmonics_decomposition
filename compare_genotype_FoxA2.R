@@ -1608,23 +1608,39 @@ hist(log10(res$pct_nkx[which(res$condition == 'wt_noRA')]), breaks = 50)
 df = data.frame(condition = levels_cc, 
                 genotype = res$genotype[match(levels_cc, res$condition)], 
                 treatment = res$treatment[match(levels_cc, res$condition)], stringsAsFactors = FALSE)
+
 df$pct_nkx = NA
 df$sd = NA
 cutoff = 0.01
+
 for(n in 1:nrow(df))
 {
   # n = 1
   kk = which(res$condition == df$condition[n])
   df$pct_nkx[n] = length(which(res$pct_nkx[kk] > cutoff)) / length(kk)
-  #df$sd[n] = var(res$pct_nkx[kk])
+  
+  images = unique(res$image[kk])
+  pct_nkx_image = c()
+  for(i in 1:length(images))
+  {
+    # i = 1
+    ii_kk = kk[which(res$image[kk] == images[i])]
+    pct_nkx_image = c(pct_nkx_image, length(which(res$pct_nkx[ii_kk] > cutoff)) / length(ii_kk))
+  }
+  
+  df$sd[n] = var(pct_nkx_image)
 }
 
 library(viridis)
 df$condition = factor(df$condition, levels = levels_cc)
 df$genotype = factor(df$genotype, levels = c('wt', 'n26'))
+#df$sd = 0.2
+#df$sd = sqrt(df$sd)
 
 ggplot(df, aes(x=condition, y=pct_nkx, fill = genotype)) +
   geom_bar(stat="identity") +
+  geom_errorbar(aes(ymin=pct_nkx-sd, ymax=pct_nkx+sd), width=.2,
+                position=position_dodge(.9)) +
   ylab("% NTOs with Nkx2.2 ") + 
   xlab("") + 
   ylim(0, 1.0) + 
@@ -1644,28 +1660,57 @@ ggsave(filename = paste0(outDir, '2xTetOn_day6_percentages_NTOs_postiveNKX22.pdf
 
 
 
-kk_sels = match(c('condition', 'pct_pp', 'pct_pn', 'pct_np', 'pct_nn'), colnames(res))
+kk_sels = match(c('condition', 'image', 'pct_pp', 'pct_pn', 'pct_np', 'pct_nn'), colnames(res))
 xx = res[, kk_sels]
 xx = xx %>%
-  tidyr::pivot_longer(!condition, names_to = "states", values_to = "pct")
+  tidyr::pivot_longer(starts_with("pct"), names_to = "states", values_to = "pct")
 
 xx = data.frame(xx)
 xx$cc = paste0(xx$condition, "_", xx$states)
 
 df = xx[match(unique(xx$cc), xx$cc), ]
+df$sd_pct = 0
 
 for(n in 1:nrow(df))
 {
+  # n = 1
   df$pct[n] = mean(xx$pct[which(xx$cc == df$cc[n])])
+  
+  jj = which(xx$cc == df$cc[n])
+  images = unique(xx$image[jj])
+  pct_image = c()
+  for(i in 1:length(images))
+  {
+    ii_jj = jj[which(xx$image[jj] == images[i])]
+    pct_image = c(pct_image, mean(xx$pct[ii_jj]))
+  }
+  
+  df$sd_pct[n] = var(pct_image)
 }
 
-df$states = factor(df$states, levels = c( 'pct_pn', 'pct_pp', 'pct_np', 'pct_nn'))
+df$states = factor(df$states, levels = c('pct_pn', 'pct_pp', 'pct_np', 'pct_nn'))
 
-ggplot(data=df, aes(x=condition, y=pct, fill=states)) +
-  geom_bar(stat="identity") +
+df$sd_pct = sqrt(df$sd_pct)
+
+error_bars = df %>%
+  arrange(condition, desc(states)) %>%
+  # for each cyl group, calculate new value by cumulative sum
+  group_by(condition) %>%
+  mutate(mean_hp_new = cumsum(pct)) %>%
+  ungroup()
+
+ggplot(df, aes(x = condition, y = pct)) +
+  geom_bar(stat = 'identity', aes(fill = states)) +
+  geom_errorbar(data = error_bars,
+                aes(x = condition, ymax = mean_hp_new + sd_pct, ymin = mean_hp_new - sd_pct), 
+                width = 0.2, position=position_dodge(.9)) +
+# ggplot(data=df, aes(x=condition, y=pct, fill=states)) +
+#   geom_bar(stat="identity") +
+#   geom_errorbar(aes(ymin=pct-sd, ymax=pct+sd), width=.2,
+#                 position=position_dodge(.9)) +
   ylab("% of states ") + 
   xlab("") + 
-  ylim(0, 1.0) + 
+  ylim(0, 1.2) + 
   theme_classic() +  
   theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
         axis.text.y = element_text(angle = 0, size = 14)) +
@@ -1676,48 +1721,48 @@ ggplot(data=df, aes(x=condition, y=pct, fill=states)) +
         legend.text = element_text(size = 14)) +
   scale_fill_manual(values=c("darkgreen", "darkorange", "red", 'gray')) 
 
-ggsave(filename = paste0(outDir, '2xTetOn_day6_percentages_cystStates.pdf'), 
+ggsave(filename = paste0(outDir, '2xTetOn_day6_percentages_cystStates_v2.pdf'), 
        width = 8, height = 5)
 
-## distribution of pn states  
-cols <- c("#F76D5E", "#FFFFBF", "#72D8FF")
-
-jj = which(res$condition == 'wt_RA' | res$condition == "n26_RA" | res$condition == "n26_dox")
-ggplot(res[jj, ], aes(x=pct_pn, fill = condition)) +
-  geom_density(alpha = 0.7) +
-  scale_fill_manual(values = c("darkgreen", "green2", "#72D8FF")) +
-  ylab("Density of % FoxA2+ Pax6- ") + 
-  xlab("") + 
-  #ylim(0, 1.0) + 
-  theme_classic() +  
-  theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 14)) +
-  theme(legend.key = element_blank()) + 
-  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
-  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
-  theme(legend.title = element_blank(), 
-        legend.text = element_text(size = 14))
-
-ggsave(filename = paste0(outDir, '2xTetOn_day6_densityPlot_percentages_statePN.pdf'), 
-       width = 8, height = 5)
-
-
-jj = which(res$condition == 'wt_RA' | res$condition == "n26_RA" | res$condition == "n26_dox")
-ggplot(res[jj, ], aes(x=pct_np, fill = condition)) +
-  geom_density(alpha = 0.7) +
-  scale_fill_manual(values = c("darkgreen", "green2", "#72D8FF")) +
-  ylab("Density of % FoxA2+ Pax6- ") + 
-  xlab("") + 
-  #ylim(0, 1.0) + 
-  theme_classic() +  
-  theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 14)) +
-  theme(legend.key = element_blank()) + 
-  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
-  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
-  theme(legend.title = element_blank(), 
-        legend.text = element_text(size = 14))
-
-ggsave(filename = paste0(outDir, '2xTetOn_day6_densityPlot_percentages_stateNP.pdf'), 
-       width = 8, height = 5)
-
+# ## distribution of pn states  
+# cols <- c("#F76D5E", "#FFFFBF", "#72D8FF")
+# 
+# jj = which(res$condition == 'wt_RA' | res$condition == "n26_RA" | res$condition == "n26_dox")
+# ggplot(res[jj, ], aes(x=pct_pn, fill = condition)) +
+#   geom_density(alpha = 0.7) +
+#   scale_fill_manual(values = c("darkgreen", "green2", "#72D8FF")) +
+#   ylab("Density of % FoxA2+ Pax6- ") + 
+#   xlab("") + 
+#   #ylim(0, 1.0) + 
+#   theme_classic() +  
+#   theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+#         axis.text.y = element_text(angle = 0, size = 14)) +
+#   theme(legend.key = element_blank()) + 
+#   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+#   #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+#   theme(legend.title = element_blank(), 
+#         legend.text = element_text(size = 14))
+# 
+# ggsave(filename = paste0(outDir, '2xTetOn_day6_densityPlot_percentages_statePN.pdf'), 
+#        width = 8, height = 5)
+# 
+# 
+# jj = which(res$condition == 'wt_RA' | res$condition == "n26_RA" | res$condition == "n26_dox")
+# ggplot(res[jj, ], aes(x=pct_np, fill = condition)) +
+#   geom_density(alpha = 0.7) +
+#   scale_fill_manual(values = c("darkgreen", "green2", "#72D8FF")) +
+#   ylab("Density of % FoxA2+ Pax6- ") + 
+#   xlab("") + 
+#   #ylim(0, 1.0) + 
+#   theme_classic() +  
+#   theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+#         axis.text.y = element_text(angle = 0, size = 14)) +
+#   theme(legend.key = element_blank()) + 
+#   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+#   #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+#   theme(legend.title = element_blank(), 
+#         legend.text = element_text(size = 14))
+# 
+# ggsave(filename = paste0(outDir, '2xTetOn_day6_densityPlot_percentages_stateNP.pdf'), 
+#        width = 8, height = 5)
+# 
