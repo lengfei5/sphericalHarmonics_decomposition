@@ -17,6 +17,9 @@ library(ggplot2)
 library(plotly)
 library(patchwork)
 
+outDir = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/",
+                "results/figures_tables_R13547_10x_mNT_20240522/")
+
 ########################################################
 ########################################################
 # Section I : distribution of FoxA2+ in WT (figure 1K and 1L) 
@@ -42,7 +45,7 @@ res$pct_foxa2_local = res$nb_foxa2_localThreshold/(res$nb_foxa2_localThreshold +
 res$pct_foxa2_mean = res$nb_foxa2_mean_cyst/(res$nb_foxa2_mean_cyst + res$nb_pax6_mean_cyst + 
                                                res$nb_double_mean_cyst)
 
-
+## here use the mean threshold for FoxA2 proportions
 USE_OTSU_cyst = FALSE
 if(USE_OTSU_cyst){
   res$pct_foxa2 = res$pct_foxa2_otsuCyst
@@ -115,17 +118,7 @@ if(USE_OTSU_cyst){
   
   res = res[which(res$cutoff_foxa2 > 450 & res$cutoff_foxa2 < 1000 & res$cutoff_pax6 > 2500 & res$cutoff_pax6 < 5000), ]
   
-  # plot(res$cyst_size, res$pct_foxa2)
-  # abline(v = c(5000, 10000), lwd = 2.0, col = 'red')
-  # 
-  # hist(res$cutoff_pax6, breaks = 40)
-  # abline(v = c(1500, 5000), lwd = 2.0, col = 'red')
-  # 
-  # res = res[which(res$cutoff_pax6 > 1500 & res$cutoff_foxa2 < 5000), ]
-  # 
-  # plot(res$cyst_size, res$pct_foxa2)
-  # abline(v = c(5000, 10000), lwd = 2.0, col = 'red')
-  # 
+  
   plot(res$cyst_size, res$pct_foxa2)
   
   plot(res$cyst_size, res$pct_double) ## here total is the number of FoxA2+, Pax6+ and FoxA2+&Pax6+ 
@@ -136,13 +129,39 @@ if(USE_OTSU_cyst){
   
   df = data.frame(pct = res$pct_foxa2, condition = rep('wt', nrow(res)))
   
+  saveRDS(df, file = paste0(outDir, 'FoxA2_pct_wt.rds'))
+  
   ggplot(df, aes(x=pct, fill = condition)) +
+    geom_density(alpha=0.7, adjust = 1.5) + 
+    xlim(0, 1) + 
+    scale_fill_manual(values=c("#337f01")) + 
+    xlab("% FoxA2+ ") + 
+    ylab("Density") + 
+    theme_classic() +  
+    theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+          axis.text.y = element_text(angle = 0, size = 14)) +
+    theme(legend.key = element_blank()) + 
+    theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+    theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+    theme(legend.title = element_blank(), 
+          legend.text = element_text(size = 14))
+  
+  ggsave(filename = paste0(outDir, 'RA_WT_day4_FoxA2pct_thresholdMean.pdf'), height = 6, width = 6)
+  
+  
+  res$pct_pax6 = 1.0 - res$pct_foxa2 - res$pct_double
+  
+  df = data.frame(pct = c(res$pct_foxa2, res$pct_double, res$pct_pax6), 
+                  gene = c(rep('FoxA2+', nrow(res)), rep('double+', nrow(res)), rep('Pax6+', nrow(res)))
+  )
+  
+  ggplot(df, aes(x=pct, fill = gene)) +
     geom_density(alpha=0.7, adjust = 1.5) + 
     xlim(0, 1) + 
     scale_fill_manual(values=c("darkgreen")) + 
     xlab("% FoxA2+ ") + 
     ylab("Density") + 
-    theme_bw() +  
+    theme_classic() +  
     theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
           axis.text.y = element_text(angle = 0, size = 14)) +
     theme(legend.key = element_blank()) + 
@@ -156,7 +175,9 @@ if(USE_OTSU_cyst){
   
 }
 
-
+##########################################
+# simulation of FoxA2 proportion 
+##########################################
 hist(res$pct_double, breaks = 40)
 res = res[which(res$pct_double <0.3), ]
 
@@ -225,6 +246,7 @@ ggplot(df, aes(x=pct, fill=condition)) +
 
 ggsave(filename = paste0(outDir, 'RA_WT_day4_FoxA2pct.pdf'), height = 6, width = 6)
 
+saveRDS(df, file = paste0(outDir, ))
 
 df = rbind(cbind(rep('wt', nrow(res)), res$pct_foxa2), 
            cbind(rep('random', length(pct)), pct),
@@ -380,17 +402,42 @@ ggplot(res, aes(x=genotype_pct_pxko, y=pct_foxa22)) +
   geom_smooth(method=lm) +
   ylab("% FoxA2+ ") + 
   xlab("genotype % Pax6-/-") + 
-  theme_bw() +  
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme_classic() +  
+  theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 14)) +
   theme(legend.key = element_blank()) + 
   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
   #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
   theme(legend.title = element_blank(), 
         legend.text = element_text(size = 14))
 
-ggsave(filename = paste0(outDir, 'RA_WT_KO_KO_day4_FoxA2pct_final.pdf'), height = 6, width = 10)
+ggsave(filename = paste0(outDir, 'RA_WT_KO_KO_day4_FoxA2pct_final.pdf'), height = 6, width = 8)
 
+
+## compare the FoxA2 percentages with the WT 
+df = readRDS(file = paste0(outDir, 'FoxA2_pct_wt.rds'))
+
+df = rbind(df, data.frame(pct = res$pct_foxa22, condition = rep('KO_KO', nrow(res))))
+
+ggplot(df, aes(x=pct, fill=condition)) +
+  geom_density(alpha=0.5, adjust = 1.5) +
+  scale_fill_manual(values=c("#007BB7", "#337f01")) + 
+  xlab("% FoxA2+ ") + 
+  ylab("Density") + 
+  theme_classic() +  
+  theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 14)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14)) +
+  ggtitle('KS-test : p < 1e-10')
+
+ggsave(filename = paste0(outDir, 'RA_day4_FoxA2pct_compare_KOKOvsWT.pdf'), height = 4, width = 8)
+
+ks.test(x = df$pct[which(df$condition == 'wt')], 
+        y = df$pct[which(df$condition == 'KO_KO')])
 
 ##########################################
 # Pax6KO and FoxA2KO quantifying the genotypes and marker genes  
@@ -478,14 +525,26 @@ hist(res$pct_marker[which(res$treatment == 'noRA')], breaks = 50)
 
 df = c()
 cutoffs = seq(0, 1, by = 0.2)
+pvals = c()
+
 for(n in 1:(length(cutoffs)-1))
 {
   index_group = which(res$treatment == 'RA'& res$genotype_pct_cyst >=cutoffs[n] & res$genotype_pct_cyst < cutoffs[n+1])
+  
+  p = binom.test(x = length(which(res$pct_marker[index_group] > 0.03)), 
+             n = length(index_group), 
+             p = 0.6733333, 
+             alternative = c('less'))
+  
+  print(p$p.value)
+  pvals = c(pvals, p$p.value)
   df = c(df, length(which(res$pct_marker[index_group] > 0.03))/length(index_group))
+  
 }
 
 df = data.frame(group = c('WT',  '0-20%', '20-40%', '40-60%', '60-80%', '80-100%'), 
-                pct_cystOlig2 = c(0.6733333, df))
+                pct_cystOlig2 = c(0.6733333, df),
+                pvals = c(NA, pvals))
 
 df$group = factor(df$group, levels = c('WT',  '0-20%', '20-40%', '40-60%', '60-80%', '80-100%'))
 
@@ -496,10 +555,10 @@ ggplot(data=df, aes(x=group, y=pct_cystOlig2, fill=group)) +
   xlab("% genotype Pax6-/-") +
   ylim(0, 0.7) + 
   #geom_hline(yintercept=0.25, linetype="dashed", color = "red") + 
-  theme_bw() +  
+  theme_classic() +  
   scale_fill_manual(values=c("darkgreen", rep("steelblue", 5))) +
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 14)) +
   theme(legend.key = element_blank()) + 
   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
   #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
@@ -508,8 +567,12 @@ ggplot(data=df, aes(x=group, y=pct_cystOlig2, fill=group)) +
 
 ggsave(filename = paste0(outDir, 'RA_KOKO_day6_DVpatterning_Olig2_vsWT.pdf'), height = 6, width = 8)
 
+write.table(df, file = paste0(outDir, 'RA_KOKO_day6_DVpatterning_Olig2_vsWT_pvals.txt'), 
+            sep = '\t', col.names = TRUE, quote = FALSE, row.names = FALSE)
 
-####### quantifying the Olig2 in WT with RA
+##########################################
+# ####### quantifying the Olig2 in WT with RA
+##########################################
 res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
                              "WT_d6_stain_DVpatterning/",
                              "WT_d6_cyst_size_manualOlig2global_v2.csv"), 
@@ -538,7 +601,6 @@ jj2 = which(res$treatment == 'RA')
 hist(res$pct_marker)
 jj2 = which(res$treatment == 'RA')
 plot(log10(res$cyst_size[jj2]), res$pct_marker[jj2])
-
 
 length(which(res$pct_marker[jj2] > 0.005))/length(jj2)
 
@@ -1291,14 +1353,30 @@ ggsave(filename = paste0(outDir, 'TetOn_TetOn_day6_DVpatterning_Nkx22_vsWT_manua
 ########################################################
 res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
                              "FoxAKO_WTchim_d4/",
-                             "cyst_size_genotype_FoxA2_Pax6_cystThresholds_test_otsuThresholdGenotype_meanThresholdFoxA2_originalGenetype_Normallization_v6.csv"), 
+                             "cyst_size_genotype_FoxA2_Pax6_cystThresholds_test_otsuThresholdGenotype_meanThresholdFoxA2_",
+                             "originalGenetype_Normallization_v8.csv"), 
                header = TRUE, row.names = c(1))
 
+res$pct_foxa2_wt = res$nb_foxa2_wt/(res$nb_foxa2_wt + res$nb_pax6_wt)
 
-res$pct_foxa2 = res$nb_foxa2/(res$nb_foxa2 + res$nb_pax6)
+plot(res$pct_ko, res$pct_foxa2_wt)
 
+res$pct_foxa2_ko = res$nb_foxa2_ko/(res$nb_foxa2_ko + res$nb_pax6_ko)
+
+plot(res$pct_ko, res$pct_foxa2_ko)
+
+res$pct_foxa2_genotype = res$nb_foxa2_genotype/(res$nb_foxa2_genotype + res$nb_pax6_genotype)
+
+plot(res$pct_ko, res$pct_foxa2_genotype)
+
+res$pct_foxa2_all = res$nb_foxa2_all/(res$nb_foxa2_all + res$nb_pax6_all)
+
+plot(res$pct_ko, res$pct_foxa2_all)
+
+res$pct_foxa2 = (1 - res$pct_ko) * res$pct_foxa2_wt
 plot(res$pct_ko, res$pct_foxa2)
 
+plot(res$pct_foxa2, res$pct_foxa2_genotype)
 
 ## size filtering 
 hist(log10(res$cyst_size), breaks = 50)
@@ -1307,42 +1385,77 @@ res = res[which(res$cyst_size > 10^4), ]
 plot(res$pct_ko, res$pct_foxa2)
 
 plot(res$cutoff_wt, res$cutoff_ko)
-abline(v = 17)
-abline(h = 3.5)
+abline(v = 20)
+abline(h = 5)
 
 
-res = res[which(res$cutoff_wt < 17 & res$cutoff_ko <3.5), ]
+res = res[which(res$cutoff_wt < 20 & res$cutoff_ko <5), ]
 
-plot(res$pct_ko, res$pct_foxa2)
+plot(res$pct_ko, res$pct_foxa2_wt)
 
 plot(res$cutoff_foxa2, res$cutoff_pax6)
 abline(v = 17)
 abline(h = 3.5)
 
+plot(res$pct_foxa2_all, res$pct_foxa2_genotype)
+plot(res$pct_foxa2, res$pct_foxa2_genotype)
+
+plot(res$pct_foxa2, res$pct_foxa2_all)
+plot(res$pct_ko, res$pct_foxa2_ko);
+abline(h = 0.07)
+
+plot(res$pct_foxa2, res$pct_foxa2_all)
+
+plot(res$pct_foxa2, res$pct_foxa2_genotype)
+jj0 = which(res$pct_foxa2_ko > 0.1)
+points(res$pct_foxa2[jj0], res$pct_foxa2_genotype[jj0], col = 'red')
+
+
 plot(res$pct_ko, res$pct_foxa2)
 jj1 = which(res$cutoff_foxa2 > 6)
 points(res$pct_ko[jj1], res$pct_foxa2[jj1], pch = 16, col = 'red')
 
-res = res[which(res$cutoff_foxa2 < 6), ]
+res = res[which(res$pct_foxa2_ko < 0.1 & res$cutoff_foxa2 < 6), ]
 
-plot(res$pct_ko, (res$nb_foxa2 + res$nb_pax6))
+#plot(res$pct_ko, (res$nb_foxa2 + res$nb_pax6))
 
+#res = res[which(res$nb_pax6 > 50), ]
 
-ggplot(res, aes(x=pct_ko, y=pct_foxa2)) +
+ggplot(res, aes(x=pct_ko, y=pct_foxa2_wt)) +
   geom_point() + 
   geom_smooth(method=loess) +
   ylab("% FoxA2+ in WT ") + 
   xlab("genotype % FoxA2-/-") + 
-  theme_bw() +  
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme_classic() +  
+  xlim(0, 1) + 
+  theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 14)) +
   theme(legend.key = element_blank()) + 
   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
   #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
   theme(legend.title = element_blank(), 
         legend.text = element_text(size = 14))
 
-ggsave(filename = paste0(outDir, 'FoxA2KO_WTchimeras_day4.pdf'), height = 6, width = 10)
+ggsave(filename = paste0(outDir, 'FoxA2KO_WTchimeras_day4_v2.pdf'), height = 6, width = 8)
+
+
+ggplot(res, aes(x=pct_ko, y=pct_foxa2)) +
+  geom_point() + 
+  geom_smooth(method = loess) +
+  #geom_smooth(method = lm, formula = y ~ splines::ns(x, 2)) +
+  ylab("% FoxA2+ in WT ") + 
+  xlab("genotype % FoxA2-/-") + 
+  theme_classic() +  
+  xlim(0, 1) + 
+  theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+        axis.text.y = element_text(angle = 0, size = 14)) +
+  theme(legend.key = element_blank()) + 
+  theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+  #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
+  theme(legend.title = element_blank(), 
+        legend.text = element_text(size = 14))
+
+ggsave(filename = paste0(outDir, 'FoxA2_cyst_KOWTchimeras_day4_v2.pdf'), height = 6, width = 8)
 
 
 ##########################################
