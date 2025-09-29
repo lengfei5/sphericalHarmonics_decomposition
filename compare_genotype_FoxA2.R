@@ -20,6 +20,7 @@ library(patchwork)
 outDir = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/",
                 "results/figures_tables_R13547_10x_mNT_20240522/")
 
+
 ########################################################
 ########################################################
 # Section I : distribution of FoxA2+ in WT (figure 1K and 1L) 
@@ -1096,17 +1097,18 @@ ggplot(aa, aes(x=genotype_pct_cyst, y=pct_foxa2_cyst3, color=treatment)) +
   ylab("% FoxA2+ ") + 
   xlab("genotype % TetOn-FoxA2") + 
   geom_hline(yintercept=c(0.3), linetype="solid", linewidth = 1) +  
-  theme_bw() +  
-  theme(axis.text.x = element_text(angle = 0, size = 12, vjust = 0.4),
-        axis.text.y = element_text(angle = 0, size = 12)) +
+  theme_classic() +  
+  theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0),
+        axis.text.y = element_text(angle = 0, size = 14), 
+        axis.title=element_text(size=14,face="bold")) +
   theme(legend.key = element_blank()) + 
   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
   #theme(legend.position = c(0.8,.9), legend.direction = "vertical") +
   theme(legend.title = element_blank(), 
-        legend.text = element_text(size = 14))
+        legend.text = element_text(size = 18))
 
 ggsave(filename = paste0(outDir, 'TetOnFx_TetOnPx_day4_FoxA2pct_genotypepct_thresholdMean_v3.pdf'), 
-       height = 6, width = 10)
+       height = 6, width = 9)
 
 
 ##########################################
@@ -1619,6 +1621,7 @@ for(n in 1:nrow(df))
   kk = which(res$condition == df$condition[n])
   df$pct_nkx[n] = length(which(res$pct_nkx[kk] > cutoff)) / length(kk)
   
+  
   images = unique(res$image[kk])
   pct_nkx_image = c()
   for(i in 1:length(images))
@@ -1645,7 +1648,7 @@ ggplot(df, aes(x=condition, y=pct_nkx, fill = genotype)) +
   xlab("") + 
   ylim(0, 1.0) + 
   theme_classic() +  
-  theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+  theme(axis.text.x = element_text(angle = 45, size = 14, vjust = 0.6),
         axis.text.y = element_text(angle = 0, size = 14)) +
   theme(legend.key = element_blank()) + 
   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
@@ -1655,8 +1658,8 @@ ggplot(df, aes(x=condition, y=pct_nkx, fill = genotype)) +
   scale_fill_manual(values=c("darkgreen", "#31688EFF")) 
   #scale_fill_manual(values=c("darkgreen", rep("deepskyblue", 5))) +
 
-ggsave(filename = paste0(outDir, '2xTetOn_day6_percentages_NTOs_postiveNKX22.pdf'), 
-       width = 8, height = 5)
+ggsave(filename = paste0(outDir, '2xTetOn_day6_percentages_NTOs_postiveNKX22_v2.pdf'), 
+       width = 6, height = 4)
 
 
 
@@ -1670,11 +1673,13 @@ xx$cc = paste0(xx$condition, "_", xx$states)
 
 df = xx[match(unique(xx$cc), xx$cc), ]
 df$sd_pct = 0
+df$sd_pct2 = 0
 
 for(n in 1:nrow(df))
 {
   # n = 1
   df$pct[n] = mean(xx$pct[which(xx$cc == df$cc[n])])
+  df$sd_pct2[n] = var(xx$pct[which(xx$cc == df$cc[n])])
   
   jj = which(xx$cc == df$cc[n])
   images = unique(xx$image[jj])
@@ -1690,7 +1695,7 @@ for(n in 1:nrow(df))
 
 df$states = factor(df$states, levels = c('pct_pn', 'pct_pp', 'pct_np', 'pct_nn'))
 
-df$sd_pct = sqrt(df$sd_pct)
+df$sd_pct = df$sd_pct2
 
 error_bars = df %>%
   arrange(condition, desc(states)) %>%
@@ -1712,7 +1717,7 @@ ggplot(df, aes(x = condition, y = pct)) +
   xlab("") + 
   ylim(0, 1.2) + 
   theme_classic() +  
-  theme(axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+  theme(axis.text.x = element_text(angle = 45, size = 14, vjust = 0.4),
         axis.text.y = element_text(angle = 0, size = 14)) +
   theme(legend.key = element_blank()) + 
   theme(plot.margin=unit(c(1,3,1,1),"cm"))+
@@ -1721,7 +1726,7 @@ ggplot(df, aes(x = condition, y = pct)) +
         legend.text = element_text(size = 14)) +
   scale_fill_manual(values=c("darkgreen", "darkorange", "red", 'gray')) 
 
-ggsave(filename = paste0(outDir, '2xTetOn_day6_percentages_cystStates_v2.pdf'), 
+ggsave(filename = paste0(outDir, '2xTetOn_day6_percentages_cystStates_v3.pdf'), 
        width = 8, height = 5)
 
 # ## distribution of pn states  
