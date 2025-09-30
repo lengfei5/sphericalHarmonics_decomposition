@@ -1356,12 +1356,33 @@ ggsave(filename = paste0(outDir, 'TetOn_TetOn_day6_DVpatterning_Nkx22_vsWT_manua
 res = read.csv(file = paste0("/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/",
                              "FoxAKO_WTchim_d4/",
                              "cyst_size_genotype_FoxA2_Pax6_cystThresholds_test_otsuThresholdGenotype_meanThresholdFoxA2_",
-                             "originalGenetype_Normallization_v8.csv"), 
+                             "originalGenetype_Normallization_globallocalThreshods_v10.csv"), 
                header = TRUE, row.names = c(1))
 
 res$pct_foxa2_wt = res$nb_foxa2_wt/(res$nb_foxa2_wt + res$nb_pax6_wt)
+res$pct_ko = res$nb_ko_all/(res$nb_wt_all + res$nb_ko_all)
+res$pct_ko_global = res$nb_ko_all_global/(res$nb_wt_all_global + res$nb_ko_all_global)
 
 plot(res$pct_ko, res$pct_foxa2_wt)
+plot(res$pct_ko_global, res$pct_foxa2_wt)
+
+res$pct_foxa2 = res$nb_foxa2_all/(res$nb_foxa2_all + res$nb_pax6_all + res$nb_double_all)
+res$pct_foxa2_global = res$nb_foxa2_all_global/(res$nb_foxa2_all_global + res$nb_pax6_all_global)
+
+plot(res$pct_ko, res$pct_foxa2)
+
+plot(res$pct_ko_global, res$pct_foxa2)
+
+plot(res$pct_ko_global, res$pct_foxa2_global)
+
+
+
+kk = which(res$pct_ko_global > 0.02 & res$pct_ko_global < 0.98)
+plot(res$pct_ko_global[kk], res$pct_foxa2[kk])
+
+
+plot(res$pct_ko, res$pct_foxa2_global)
+plot(res$pct_ko_global, res$pct_foxa2_global)
 
 res$pct_foxa2_ko = res$nb_foxa2_ko/(res$nb_foxa2_ko + res$nb_pax6_ko)
 
@@ -1441,7 +1462,10 @@ ggplot(res, aes(x=pct_ko, y=pct_foxa2_wt)) +
 ggsave(filename = paste0(outDir, 'FoxA2KO_WTchimeras_day4_v2.pdf'), height = 6, width = 8)
 
 
-ggplot(res, aes(x=pct_ko, y=pct_foxa2)) +
+kk = which(res$pct_ko_global < 0.99)
+plot(res$pct_ko_global[kk], res$pct_foxa2[kk])
+
+ggplot(res[kk, ], aes(x=pct_ko_global, y=pct_foxa2)) +
   geom_point() + 
   geom_smooth(method = loess) +
   #geom_smooth(method = lm, formula = y ~ splines::ns(x, 2)) +
@@ -1457,7 +1481,7 @@ ggplot(res, aes(x=pct_ko, y=pct_foxa2)) +
   theme(legend.title = element_blank(), 
         legend.text = element_text(size = 14))
 
-ggsave(filename = paste0(outDir, 'FoxA2_cyst_KOWTchimeras_day4_v2.pdf'), height = 6, width = 8)
+ggsave(filename = paste0(outDir, 'FoxA2_cyst_KOWTchimeras_day4_v3.pdf'), height = 6, width = 8)
 
 
 ##########################################
