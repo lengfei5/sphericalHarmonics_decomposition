@@ -1377,35 +1377,58 @@ plot(res$pct_ko_global, res$pct_foxa2_global)
 
 
 
-kk = which(res$pct_ko_global > 0.02 & res$pct_ko_global < 0.98)
-plot(res$pct_ko_global[kk], res$pct_foxa2[kk])
+# kk = which(res$pct_ko_global > 0.02 & res$pct_ko_global < 0.98)
+# plot(res$pct_ko_global[kk], res$pct_foxa2[kk])
+# 
+# 
+# plot(res$pct_ko, res$pct_foxa2_global)
+# plot(res$pct_ko_global, res$pct_foxa2_global)
 
 
-plot(res$pct_ko, res$pct_foxa2_global)
-plot(res$pct_ko_global, res$pct_foxa2_global)
+# res$pct_foxa2_ko = res$nb_foxa2_ko/(res$nb_foxa2_ko + res$nb_pax6_ko)
+# 
+# plot(res$pct_ko, res$pct_foxa2_ko)
+# 
+# res$pct_foxa2_genotype = res$nb_foxa2_genotype/(res$nb_foxa2_genotype + res$nb_pax6_genotype)
+# 
+# plot(res$pct_ko, res$pct_foxa2_genotype)
+# 
+# res$pct_foxa2_all = res$nb_foxa2_all/(res$nb_foxa2_all + res$nb_pax6_all)
+# 
+# plot(res$pct_ko, res$pct_foxa2_all)
+# 
+# res$pct_foxa2 = (1 - res$pct_ko) * res$pct_foxa2_wt
+# plot(res$pct_ko, res$pct_foxa2)
+# 
+# plot(res$pct_foxa2, res$pct_foxa2_genotype)
 
-res$pct_foxa2_ko = res$nb_foxa2_ko/(res$nb_foxa2_ko + res$nb_pax6_ko)
-
-plot(res$pct_ko, res$pct_foxa2_ko)
-
-res$pct_foxa2_genotype = res$nb_foxa2_genotype/(res$nb_foxa2_genotype + res$nb_pax6_genotype)
-
-plot(res$pct_ko, res$pct_foxa2_genotype)
-
-res$pct_foxa2_all = res$nb_foxa2_all/(res$nb_foxa2_all + res$nb_pax6_all)
-
-plot(res$pct_ko, res$pct_foxa2_all)
-
-res$pct_foxa2 = (1 - res$pct_ko) * res$pct_foxa2_wt
-plot(res$pct_ko, res$pct_foxa2)
-
-plot(res$pct_foxa2, res$pct_foxa2_genotype)
 
 ## size filtering 
 hist(log10(res$cyst_size), breaks = 50)
 
-res = res[which(res$cyst_size > 10^4), ]
+res = res[which(res$cyst_size > 10^3.5), ]
+
+# plot(res$pct_ko_global, res$pct_ko)
+# abline(0, 1, lwd =2.0, col = 'red')
+# abline(v = c(0.01, 0.99), col = 'red')
+# 
+# res$pct_ko[which(res$pct_ko_global > 0.99)] = 1.0
+# res$pct_ko[which(res$pct_ko_global < 0.01)] = 0
+
 plot(res$pct_ko, res$pct_foxa2)
+
+plot(res$pct_ko, res$pct_foxa2_global)
+
+plot(res$pct_ko_global, res$pct_foxa2, ylim = range(c(res$pct_foxa2, res$pct_foxa2_global)))
+points(res$pct_ko_global, res$pct_foxa2_global, col = 'blue')
+
+
+plot(res$pct_foxa2_global, res$pct_foxa2, xlim = c(0, 1), ylim = c(0, 1))
+abline(0, 1, lwd = 2.0, col = 'blue')
+abline(v = 0.01, col = 'red')
+
+
+#plot(res$pct_ko, res$pct_foxa2)
 
 plot(res$cutoff_wt, res$cutoff_ko)
 abline(v = 20)
@@ -1795,3 +1818,110 @@ ggsave(filename = paste0(outDir, '2xTetOn_day6_percentages_cystStates_v3.pdf'),
 # ggsave(filename = paste0(outDir, '2xTetOn_day6_densityPlot_percentages_stateNP.pdf'), 
 #        width = 8, height = 5)
 # 
+
+
+########################################################
+########################################################
+# Section X: analyze the embryo data
+# 
+########################################################
+########################################################
+inputDir = paste0('/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/', 
+                  'embryo_features/test/')
+
+list_files = list.files(path = inputDir, pattern = '*.csv', full.names = TRUE)
+
+res = c()
+for(n in 1:length(list_files))
+{
+  # n = 1
+  xx = read.csv(file = list_files[n])
+  xx = xx[, grep('^area_foxa2|intensity_mean', colnames(xx))]
+  cc = gsub('.csv', '', basename(list_files[n]))
+  cc = gsub('featuresCollection_250712_30xsil-041umZ_|featuresCollection_250713_30xsil-041umZ_', '', cc)
+  xx = data.frame(condition = rep(cc, nrow(xx)), xx)
+  res = rbind(res, xx)
+  rm(xx)
+  
+}
+
+colnames(res)[2:ncol(res)] = c('area', 'foxa2', 'pax6', 'sox2', 'dapi')
+
+res$condition = gsub('E85-','', res$condition)
+res$condition = gsub('crop-','', res$condition)
+res$embryo = sapply(res$condition, function(x){unlist(strsplit(as.character(x), '_'))[1]})
+res$position = sapply(res$condition, function(x){unlist(strsplit(as.character(x), '_'))[2]})
+
+res$area = log10(res$area)
+
+hist(res$area, breaks = 100)
+abline(v = c(4, 4.9))
+
+res = res[which(res$area > 4 & res$area < 4.9), ]
+
+res$foxa2 = log10(res$foxa2)
+res$pax6 = log10(res$pax6)
+
+hist(res$foxa2, breaks = 100)
+abline(v = c(3.2))
+
+hist(res$pax6, breaks = 100)
+abline(v = c(3.65))
+
+embs = unique(res$embryo)
+cc = unique(res$position)
+
+res = data.frame(res)
+
+cc = c("CLE2",  "CLE1", "somite7", "somite6", "somite5", "somite4", "somite3", "somite2", "somite1")
+
+library(ggpubr)
+
+for(e in embs)
+{
+  # e = embs[3]
+  cc_emb = cc[which(!is.na(match(cc, unique(res$position[which(res$embryo == e)]))))]
+  
+  for(n in 1:length(cc_emb))
+  {
+    # n =5
+    c = cc_emb[n]
+    kk = which(res$position == cc_emb[n] & res$embryo == e)
+    
+    eval(parse(text = paste0("p", n, " = ggplot(res[kk, ], aes(x=foxa2, y=sox2)) +
+    geom_point(size = 1) +
+    geom_density_2d() + 
+    #xlim(2.3, 4.2) +
+    #ylim(2.3, 4.2) +
+    geom_hline(yintercept = 3.5) +
+    geom_vline(xintercept = 3.0) + 
+    theme_classic() + 
+    ggtitle(c)            
+                           ")))
+    
+  }
+  
+  if(length(cc_emb) == 8){
+    ggarrange(p1, p2, p3, p4, p5, p6, p7, p8, 
+              #labels = c("A", "B", "C"),
+              ncol = 4, nrow = 2)
+    ggsave(filename = paste0(outDir, 'firstTeset_embryo_', e, '.pdf'),  
+           width = 16, height = 6)
+    
+  }
+  
+  if(length(cc_emb) == 9){
+    ggarrange(p1, p2, p3, p4, p5, p6, p7, p8, p9,
+              #labels = c("A", "B", "C"),
+              ncol = 3, nrow = 3)
+    
+    ggsave(filename = paste0(outDir, 'firstTeset_embryo_', e, '.pdf'),  
+           width = 16, height = 12)
+    
+  }
+  
+  
+}
+
+
+
