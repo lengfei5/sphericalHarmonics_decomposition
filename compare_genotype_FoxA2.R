@@ -46,9 +46,11 @@ res$pct_foxa2_local = res$nb_foxa2_localThreshold/(res$nb_foxa2_localThreshold +
 res$pct_foxa2_mean = res$nb_foxa2_mean_cyst/(res$nb_foxa2_mean_cyst + res$nb_pax6_mean_cyst + 
                                                res$nb_double_mean_cyst)
 
+
 ## here use the mean threshold for FoxA2 proportions
 USE_OTSU_cyst = FALSE
 if(USE_OTSU_cyst){
+  
   res$pct_foxa2 = res$pct_foxa2_otsuCyst
   res$pct_double = res$nb_double_otsu_cyst/(res$nb_foxa2_otsu_cyst + res$nb_pax6_otsu_cyst + res$nb_double_otsu_cyst)
   res$cutoff_foxa2 = res$cutoff_otsu_cyst_foxa2
@@ -89,9 +91,29 @@ if(USE_OTSU_cyst){
   
 }else{
   
-  res$pct_foxa2 = res$pct_foxa2_mean
+  res$pct_foxa2 = res$nb_foxa2_localThreshold/(res$nb_double_localThreshold + res$nb_foxa2_localThreshold +
+                                                 res$nb_pax6_localThreshold)
+  res$pct_pax6 = res$nb_pax6_localThreshold/(res$nb_double_localThreshold + res$nb_foxa2_localThreshold +
+                                                 res$nb_pax6_localThreshold)
+  
   res$pct_double = res$nb_double_mean_cyst/(res$nb_foxa2_mean_cyst + res$nb_pax6_mean_cyst + 
                                               res$nb_double_mean_cyst)
+  
+  
+  res$pct_pax6 = res$nb_pax6_otsu_cyst/(res$nb_pax6_otsu_cyst + res$nb_foxa2_otsu_cyst + 
+                                              res$nb_double_otsu_cyst)
+  
+  res$pct_pax6 = res$nb_pax6_otsu_cyst/(res$nb_pax6_otsu_cyst+ res$nb_foxa2_mean_cyst)
+  hist(res$pct_pax6)
+  abline(v = 0.6, col = 'blue')
+  
+  hist(res$pct_foxa2)
+  abline(v = 0.3, col = 'blue')
+  
+  res$pct_pax6 = res$nb_pax6_otsu_cyst/(res$nb_pax6_otsu_cyst+ res$nb_foxa2_mean_cyst)
+  
+  plot(res$nb_pax6_mean_cyst, res$nb_)
+  abline(0, 1, lwd =2.0, col = 'red')
   
   res$cutoff_foxa2 = res$cutoff_mean_cyst_foxa2
   res$cutoff_pax6 = res$cutoff_mean_cyst_pax6
@@ -159,7 +181,7 @@ if(USE_OTSU_cyst){
   ggplot(df, aes(x=pct, fill = gene)) +
     geom_density(alpha=0.7, adjust = 1.5) + 
     xlim(0, 1) + 
-    scale_fill_manual(values=c("darkgreen")) + 
+    #scale_fill_manual(values=c("darkgreen")) + 
     xlab("% FoxA2+ ") + 
     ylab("Density") + 
     theme_classic() +  
@@ -1827,7 +1849,7 @@ ggsave(filename = paste0(outDir, '2xTetOn_day6_percentages_cystStates_v3.pdf'),
 ########################################################
 ########################################################
 inputDir = paste0('/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/', 
-                  'embryo_features/test/')
+                  'embryo_features/test_v2/')
 
 list_files = list.files(path = inputDir, pattern = '*.csv', full.names = TRUE)
 
@@ -1835,8 +1857,9 @@ res = c()
 for(n in 1:length(list_files))
 {
   # n = 1
+  cat(n, basename(list_files[n]), '\n')
   xx = read.csv(file = list_files[n])
-  xx = xx[, grep('^area_foxa2|intensity_mean', colnames(xx))]
+  xx = xx[, c(2:9, grep('^area_foxa2|intensity_mean', colnames(xx)))]
   cc = gsub('.csv', '', basename(list_files[n]))
   cc = gsub('featuresCollection_250712_30xsil-041umZ_|featuresCollection_250713_30xsil-041umZ_', '', cc)
   xx = data.frame(condition = rep(cc, nrow(xx)), xx)
@@ -1845,19 +1868,33 @@ for(n in 1:length(list_files))
   
 }
 
-colnames(res)[2:ncol(res)] = c('area', 'foxa2', 'pax6', 'sox2', 'dapi')
+colnames(res)[(ncol(res)-4):ncol(res)] = c('area', 'foxa2', 'pax6', 'sox2', 'dapi')
 
 res$condition = gsub('E85-','', res$condition)
 res$condition = gsub('crop-','', res$condition)
 res$embryo = sapply(res$condition, function(x){unlist(strsplit(as.character(x), '_'))[1]})
 res$position = sapply(res$condition, function(x){unlist(strsplit(as.character(x), '_'))[2]})
 
-res$area = log10(res$area)
+plot(res$volume, res$area, log = 'xy')
+abline(0, 1, lwd = 2.0, col = 'red')
+
+res$area = log10(res$volume)
 
 hist(res$area, breaks = 100)
 abline(v = c(4, 4.9))
 
-res = res[which(res$area > 4 & res$area < 4.9), ]
+plot(res$sphericity_legland, res$solidity)
+plot(res$sphericity_wadell, res$solidity)
+
+plot(res$sphericity_legland, res$sphericity_wadell)
+abline(h = 0.8)
+
+plot(res$area, res$sphericity_wadell, cex = 0.1)
+abline(v = c(4., 4.9), col = 'red', lwd = 1.5)
+abline(h = c(0.6), col = 'red', lwd = 1.5)
+
+res = res[which(res$area > 4. & res$area < 4.9 & res$sphericity_wadell > 0.6), ]
+
 
 res$foxa2 = log10(res$foxa2)
 res$pax6 = log10(res$pax6)
@@ -1866,7 +1903,10 @@ hist(res$foxa2, breaks = 100)
 abline(v = c(3.2))
 
 hist(res$pax6, breaks = 100)
-abline(v = c(3.65))
+abline(v = c(3.6, 3.2))
+
+saveRDS(res, file = paste0(outDir, 'embryo_features_filtered.size.sphericity_v2.rds'))
+#saveRDS(res, file = paste0(outDir, 'embryo_features_filtered.size_v1.rds'))
 
 embs = unique(res$embryo)
 cc = unique(res$position)
@@ -1874,6 +1914,8 @@ cc = unique(res$position)
 res = data.frame(res)
 
 cc = c("CLE2",  "CLE1", "somite7", "somite6", "somite5", "somite4", "somite3", "somite2", "somite1")
+
+
 
 library(ggpubr)
 
@@ -1888,12 +1930,12 @@ for(e in embs)
     c = cc_emb[n]
     kk = which(res$position == cc_emb[n] & res$embryo == e)
     
-    eval(parse(text = paste0("p", n, " = ggplot(res[kk, ], aes(x=foxa2, y=sox2)) +
+    eval(parse(text = paste0("p", n, " = ggplot(res[kk, ], aes(x=foxa2, y=pax6)) +
     geom_point(size = 1) +
     geom_density_2d() + 
-    #xlim(2.3, 4.2) +
-    #ylim(2.3, 4.2) +
-    geom_hline(yintercept = 3.5) +
+    xlim(2.5, 4.0) +
+    ylim(2.5, 4.0) +
+    geom_hline(yintercept = c(3.2)) +
     geom_vline(xintercept = 3.0) + 
     theme_classic() + 
     ggtitle(c)            
@@ -1910,6 +1952,7 @@ for(e in embs)
     
   }
   
+  
   if(length(cc_emb) == 9){
     ggarrange(p1, p2, p3, p4, p5, p6, p7, p8, p9,
               #labels = c("A", "B", "C"),
@@ -1920,8 +1963,52 @@ for(e in embs)
     
   }
   
-  
 }
 
+
+##########################################
+# plot test for embyo H and L 
+##########################################
+res  = readRDS(file = paste0(outDir, 'embryo_features_filtered.size.sphericity_v2.rds'))
+res = data.frame(res)
+
+res = res[which(res$embryo != 'embB'), ]
+
+embs = unique(res$embryo)
+cc = unique(res$position)
+
+cc = c("CLE2",  "CLE1", "somite7", "somite6", "somite5", "somite4", "somite3", "somite2", "somite1")
+
+for(n in 1:length(cc))
+{
+  # n = 1
+  c = cc[n]
+  kk = which(res$position == c)
+  
+  plot = ggplot(res[kk, ], aes(x=foxa2, y=pax6, color = embryo)) +
+    geom_point(size = 1) +
+    #geom_density_2d() + 
+    xlim(2.5, 4.0) +
+    ylim(2.5, 4.0) +
+    geom_hline(yintercept = c(3.2)) +
+    geom_vline(xintercept = 3.0) + 
+    theme_classic() + 
+    ggtitle(c) +
+    theme(axis.title=element_text(size=14, face="bold"),
+          axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+          axis.text.y = element_text(angle = 0, size = 14)) +
+    theme(legend.key = element_blank()) + 
+    theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+    theme(legend.position = c(0.9,1.0), legend.direction = "vertical") +
+    theme(legend.title = element_blank(), 
+          legend.text = element_text(size = 14)) +
+    xlab("FoxA2") + 
+    ylab("Pax6") 
+  
+  ggsave(filename = paste0(outDir, 'firstTest_embryoHI_', c, '.pdf'),  
+         width = 8, height = 6)
+  
+  
+}
 
 
