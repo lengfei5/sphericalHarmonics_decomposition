@@ -2008,7 +2008,184 @@ for(n in 1:length(cc))
   ggsave(filename = paste0(outDir, 'firstTest_embryoHI_', c, '.pdf'),  
          width = 8, height = 6)
   
+}
+
+##########################################
+#  percentages of FoxA2+, Pax6+ and ++ cells based on the FoxA2 and Pax6 intensity
+##########################################
+res  = readRDS(file = paste0(outDir, 'embryo_features_filtered.size.sphericity_v2.rds'))
+res = data.frame(res)
+
+embs = unique(res$embryo)
+cc = unique(res$position)
+cc = c("CLE2",  "CLE1", "somite7", "somite6", "somite5", "somite4", "somite3", "somite2", "somite1")
+
+
+for(n in 1:length(embs))
+{
+  # n = 1
+  e = embs[n]
+  kk = which(res$embryo == e)
+  xx = res[kk, ]
+  
+  c = unique(xx$position)
+  
+  pcts = c()
+  cutoff = 0.02
+  for(i in 1:length(c))
+  {
+    jj = which(xx$position == c[i])
+    
+    index_foxa2 = which(xx$pct_foxa2[jj] > cutoff & xx$pct_pax6[jj] < cutoff)
+    index_pax6 = which(xx$pct_foxa2[jj] < cutoff & xx$pct_pax6[jj] > cutoff)
+    index_double = which(xx$pct_foxa2[jj] > cutoff & xx$pct_pax6[jj] > cutoff)
+    
+    pcts = rbind(pcts, c(e, c[i], 'FoxA2+', length(index_foxa2)/length(jj)))
+    pcts = rbind(pcts, c(e, c[i], 'Pax6+', length(index_pax6)/length(jj)))
+    pcts = rbind(pcts, c(e, c[i], 'doublePos', length(index_double)/length(jj)))
+    pcts = rbind(pcts, c(e, c[i], 'doubleNeg', 
+                         (length(jj) - length(index_double) - length(index_foxa2) - length(index_pax6))/length(jj)
+    )
+    )
+  }
+  
+  pcts = data.frame(pcts)
+  colnames(pcts) = c('embryo', 'position', 'group', 'pct')
+  pcts$position = factor(pcts$position, levels = cc)
+  pcts$position = droplevels(pcts$position)
+  pcts$pct = as.numeric(pcts$pct)
+  pcts$group = factor(pcts$group, levels = c('FoxA2+', 'Pax6+', 'doublePos', 'doubleNeg'))
+  
+  
+  ggplot(data=pcts, aes(x=position, y=pct, fill=group)) +
+    #geom_bar(stat="identity", color="black", position=position_dodge())+
+    geom_bar(stat="identity") + 
+    theme_minimal() + 
+    scale_fill_manual(values=c('darkgreen',"red", '#E69F00', 'gray')) + # Use custom colors
+    ggtitle(e) +
+    theme(axis.title=element_text(size=14, face="bold"),
+          axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+          axis.text.y = element_text(angle = 0, size = 14)) +
+    theme(legend.key = element_blank()) + 
+    #theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+    #theme(legend.position = c(0.9,1.0), legend.direction = "vertical") +
+    theme(legend.title = element_blank(), 
+          legend.text = element_text(size = 14)) +
+    xlab("") + 
+    ylab("%") 
+  
+  ggsave(filename = paste0(outDir, 'firstTest_otsuThresholding_embryo_', e, 'doublePos_pct.pdf'),  
+         width = 12, height = 6)
   
 }
 
 
+
+
+##########################################
+# percentages of FoxA2+, Pax6+ and ++ cells based on the image thresholding
+##########################################
+inputDir = paste0('/Volumes/groups/tanaka/People/current/jiwang/projects/RA_competence/images_data/results/', 
+                  'embryo_features/test_foxa2_pax6')
+
+list_files = list.files(path = inputDir, pattern = '*.csv', full.names = TRUE)
+
+res = c()
+for(n in 1:length(list_files))
+{
+  # n = 1
+  cat(n, basename(list_files[n]), '\n')
+  xx = read.csv(file = list_files[n])
+  xx = xx[, -1]
+  cc = gsub('.csv', '', basename(list_files[n]))
+  cc = gsub('250712_30xsil-041umZ_E85-|embryo_voxel_counts_global_otsu_li_mean|250713_30xsil-041umZ_E85-', '', cc)
+  xx = data.frame(condition = rep(cc, nrow(xx)), xx)
+  res = rbind(res, xx)
+  rm(xx)
+  
+}
+
+colnames(res)[3:4] = c('cell_index', 'cell_size')
+
+#res$condition = gsub('E85-','', res$condition)
+res$condition = gsub('crop-','', res$condition)
+res$embryo = sapply(res$condition, function(x){unlist(strsplit(as.character(x), '_'))[1]})
+res$position = sapply(res$condition, function(x){unlist(strsplit(as.character(x), '_'))[2]})
+res$id = paste0(res$condition, '_', res$cell_index)
+
+xx = readRDS(file = paste0(outDir, 'embryo_features_filtered.size.sphericity_v2.rds'))
+xx$id = paste0(xx$condition, '_', xx$label)
+
+mm = match(xx$id, res$id)
+
+res = res[mm, ]
+
+#saveRDS(res, file = paste0(outDir, 'embryo_FoxA2_Pax6_detection.rds'))
+
+## define FoxA2+, Pax6+ or FoxA2+Pax6+
+res = readRDS(file = paste0(outDir, 'embryo_FoxA2_Pax6_detection.rds'))
+res$pct_foxa2 = res$nb_foxa2_otsu_global/res$cell_size
+res$pct_pax6 = res$nb_pax6_otsu_global/res$cell_size
+
+embs = unique(res$embryo)
+cc = unique(res$position)
+cc = c("CLE2",  "CLE1", "somite7", "somite6", "somite5", "somite4", "somite3", "somite2", "somite1")
+
+
+for(n in 1:length(embs))
+{
+  # n = 1
+  e = embs[n]
+  kk = which(res$embryo == e)
+  xx = res[kk, ]
+  
+  c = unique(xx$position)
+  
+  pcts = c()
+  cutoff = 0.02
+  for(i in 1:length(c))
+  {
+    jj = which(xx$position == c[i])
+    
+    index_foxa2 = which(xx$pct_foxa2[jj] > cutoff & xx$pct_pax6[jj] < cutoff)
+    index_pax6 = which(xx$pct_foxa2[jj] < cutoff & xx$pct_pax6[jj] > cutoff)
+    index_double = which(xx$pct_foxa2[jj] > cutoff & xx$pct_pax6[jj] > cutoff)
+    
+    pcts = rbind(pcts, c(e, c[i], 'FoxA2+', length(index_foxa2)/length(jj)))
+    pcts = rbind(pcts, c(e, c[i], 'Pax6+', length(index_pax6)/length(jj)))
+    pcts = rbind(pcts, c(e, c[i], 'doublePos', length(index_double)/length(jj)))
+    pcts = rbind(pcts, c(e, c[i], 'doubleNeg', 
+                         (length(jj) - length(index_double) - length(index_foxa2) - length(index_pax6))/length(jj)
+                         )
+                 )
+  }
+  
+  pcts = data.frame(pcts)
+  colnames(pcts) = c('embryo', 'position', 'group', 'pct')
+  pcts$position = factor(pcts$position, levels = cc)
+  pcts$position = droplevels(pcts$position)
+  pcts$pct = as.numeric(pcts$pct)
+  pcts$group = factor(pcts$group, levels = c('FoxA2+', 'Pax6+', 'doublePos', 'doubleNeg'))
+  
+  
+  ggplot(data=pcts, aes(x=position, y=pct, fill=group)) +
+    #geom_bar(stat="identity", color="black", position=position_dodge())+
+    geom_bar(stat="identity") + 
+    theme_minimal() + 
+    scale_fill_manual(values=c('darkgreen',"red", '#E69F00', 'gray')) + # Use custom colors
+    ggtitle(e) +
+    theme(axis.title=element_text(size=14, face="bold"),
+          axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+          axis.text.y = element_text(angle = 0, size = 14)) +
+    theme(legend.key = element_blank()) + 
+    #theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+    #theme(legend.position = c(0.9,1.0), legend.direction = "vertical") +
+    theme(legend.title = element_blank(), 
+          legend.text = element_text(size = 14)) +
+    xlab("") + 
+    ylab("%") 
+  
+  ggsave(filename = paste0(outDir, 'firstTest_otsuThresholding_embryo_', e, 'doublePos_pct.pdf'),  
+         width = 12, height = 6)
+  
+}
