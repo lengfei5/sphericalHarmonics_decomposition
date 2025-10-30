@@ -2011,14 +2011,17 @@ for(n in 1:length(cc))
 }
 
 ##########################################
-#  percentages of FoxA2+, Pax6+ and ++ cells based on the FoxA2 and Pax6 intensity
+# plot FoxA2 and Pax6 intensity for only somite 1-4
 ##########################################
 res  = readRDS(file = paste0(outDir, 'embryo_features_filtered.size.sphericity_v2.rds'))
 res = data.frame(res)
 
 embs = unique(res$embryo)
 cc = unique(res$position)
-cc = c("CLE2",  "CLE1", "somite7", "somite6", "somite5", "somite4", "somite3", "somite2", "somite1")
+
+cc = c("somite4", "somite3", "somite2", "somite1")
+
+res = res[which(!is.na(match(res$position, cc))), ]
 
 
 for(n in 1:length(embs))
@@ -2026,42 +2029,15 @@ for(n in 1:length(embs))
   # n = 1
   e = embs[n]
   kk = which(res$embryo == e)
-  xx = res[kk, ]
   
-  c = unique(xx$position)
-  
-  pcts = c()
-  cutoff = 0.02
-  for(i in 1:length(c))
-  {
-    jj = which(xx$position == c[i])
-    
-    index_foxa2 = which(xx$pct_foxa2[jj] > cutoff & xx$pct_pax6[jj] < cutoff)
-    index_pax6 = which(xx$pct_foxa2[jj] < cutoff & xx$pct_pax6[jj] > cutoff)
-    index_double = which(xx$pct_foxa2[jj] > cutoff & xx$pct_pax6[jj] > cutoff)
-    
-    pcts = rbind(pcts, c(e, c[i], 'FoxA2+', length(index_foxa2)/length(jj)))
-    pcts = rbind(pcts, c(e, c[i], 'Pax6+', length(index_pax6)/length(jj)))
-    pcts = rbind(pcts, c(e, c[i], 'doublePos', length(index_double)/length(jj)))
-    pcts = rbind(pcts, c(e, c[i], 'doubleNeg', 
-                         (length(jj) - length(index_double) - length(index_foxa2) - length(index_pax6))/length(jj)
-    )
-    )
-  }
-  
-  pcts = data.frame(pcts)
-  colnames(pcts) = c('embryo', 'position', 'group', 'pct')
-  pcts$position = factor(pcts$position, levels = cc)
-  pcts$position = droplevels(pcts$position)
-  pcts$pct = as.numeric(pcts$pct)
-  pcts$group = factor(pcts$group, levels = c('FoxA2+', 'Pax6+', 'doublePos', 'doubleNeg'))
-  
-  
-  ggplot(data=pcts, aes(x=position, y=pct, fill=group)) +
-    #geom_bar(stat="identity", color="black", position=position_dodge())+
-    geom_bar(stat="identity") + 
-    theme_minimal() + 
-    scale_fill_manual(values=c('darkgreen',"red", '#E69F00', 'gray')) + # Use custom colors
+  plot = ggplot(res[kk, ], aes(x=foxa2, y=pax6, color = position)) +
+    geom_point(size = 1) +
+    #geom_density_2d() + 
+    xlim(2.7, 4.0) +
+    ylim(2.7, 4.0) +
+    #geom_hline(yintercept = c(3.2)) +
+    #geom_vline(xintercept = 3.0) + 
+    theme_classic() + 
     ggtitle(e) +
     theme(axis.title=element_text(size=14, face="bold"),
           axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
@@ -2070,16 +2046,233 @@ for(n in 1:length(embs))
     #theme(plot.margin=unit(c(1,3,1,1),"cm"))+
     #theme(legend.position = c(0.9,1.0), legend.direction = "vertical") +
     theme(legend.title = element_blank(), 
-          legend.text = element_text(size = 14)) +
-    xlab("") + 
-    ylab("%") 
-  
-  ggsave(filename = paste0(outDir, 'firstTest_otsuThresholding_embryo_', e, 'doublePos_pct.pdf'),  
-         width = 12, height = 6)
+          legend.text = element_text(size = 16)) +
+    xlab("FoxA2") + 
+    ylab("Pax6") +
+    scale_color_brewer(palette = "Set1")
+  plot
+  #ggsave(filename = paste0(outDir, 'firstTest_embryoHI_', c, '.pdf'),  
+  #       width = 8, height = 6)
+  ggsave(filename = paste0(outDir, 'ScatterPlot_somite1_4_embryo_', e, '.pdf'),  
+         width = 8, height = 6)
   
 }
 
 
+##########################################
+# multi-gaussian clustering of FoxA2, Pax6 and Sox2 
+##########################################
+res  = readRDS(file = paste0(outDir, 'embryo_features_filtered.size.sphericity_v2.rds'))
+res = data.frame(res)
+
+embs = unique(res$embryo)
+cc = unique(res$position)
+
+cc = c("somite4", "somite3", "somite2", "somite1")
+
+res = res[which(!is.na(match(res$position, cc))), ]
+
+
+for(n in 1:length(embs))
+{
+  # n = 1
+  e = embs[n]
+  kk = which(res$embryo == e)
+  
+  hist(res$foxa2[kk], breaks = 100)
+  hist(res$pax6[kk], breaks = 100)
+  hist(res$sox2[kk], breaks = 100)
+  
+  
+  
+  plot = ggplot(res[kk, ], aes(x=foxa2, y=pax6, color = position)) +
+    geom_point(size = 1) +
+    #geom_density_2d() + 
+    xlim(2.7, 4.0) +
+    ylim(2.7, 4.0) +
+    #geom_hline(yintercept = c(3.2)) +
+    #geom_vline(xintercept = 3.0) + 
+    theme_classic() + 
+    ggtitle(e) +
+    theme(axis.title=element_text(size=14, face="bold"),
+          axis.text.x = element_text(angle = 0, size = 14, vjust = 0.4),
+          axis.text.y = element_text(angle = 0, size = 14)) +
+    theme(legend.key = element_blank()) + 
+    #theme(plot.margin=unit(c(1,3,1,1),"cm"))+
+    #theme(legend.position = c(0.9,1.0), legend.direction = "vertical") +
+    theme(legend.title = element_blank(), 
+          legend.text = element_text(size = 16)) +
+    xlab("FoxA2") + 
+    ylab("Pax6") +
+    scale_color_brewer(palette = "Set1")
+  plot
+  #ggsave(filename = paste0(outDir, 'firstTest_embryoHI_', c, '.pdf'),  
+  #       width = 8, height = 6)
+  ggsave(filename = paste0(outDir, 'ScatterPlot_somite1_4_embryo_', e, '.pdf'),  
+         width = 8, height = 6)
+  
+}
+
+
+library(mclust)
+load(file = paste0(RdataDir, '/cytof_mat_transformedData_metadata.Rdata'))
+
+outDir = paste0(resDir, '/pooling_treatment_time_inclSOX2_v2.8')
+if(!dir.exists(outDir)) dir.create(outDir)
+
+##########################################
+# pooling all treatment and time
+##########################################
+#subsample = sample(c(1:nrow(mat)), size = 10000, replace = FALSE)
+subsample = c(1:nrow(mat))
+#cat('time point -- ', t, '\n')
+#subsample = which(metadata$time == t)
+
+# not considering Sox2, not informative
+mat = mat[subsample, c(5, 2, 4, 3, 1)]
+metadata = metadata[subsample, ]
+
+print(dim(mat))
+print(dim(metadata))
+
+# clPairs(mat, metadata$condition)
+# BIC <- mclustBIC(mat)
+# plot(BIC)
+
+for(nb_clusters in c(3:8))
+{
+  # nb_clusters = 7
+  cat('nb of cluster -- ', nb_clusters, '\n')
+  
+  Search_for_optimal_initiation = FALSE
+  if(Search_for_optimal_initiation){
+    logliks = c()
+    
+    for(n in 0:25)
+    {
+      
+      set.seed(2000)
+      mb = Mclust(mat, G = nb_clusters)
+      
+      # optimal selected model
+      #mb$modelName
+      
+      # optimal number of cluster
+      #mb$G
+      cat(n, "--", mb$loglik, "\n")
+      logliks = c(logliks, mb$loglik)
+      
+    }
+    
+    xx = data.frame(seeds = c(0:11, 0:25), loglik = logliks)
+    saveRDS(xx, file = paste0(outDir, '/seed_loglikelihood_saved_v2.rds'))
+    
+    xx = readRDS(file = paste0("../results/FACS_analysis_clusteringWT/",
+                               "pooling_treatment_time_inclSOX2_v2.6_testInitiation/",
+                               "seed_loglikelihood_saved_v2.rds"))
+    
+  }
+  
+  set.seed(1000)
+  mb = Mclust(mat, G = nb_clusters, control = emControl(itmax=500, tol = 1.e-6))
+  
+  cat('loglike --', mb$loglik, "\n")
+  
+  # probality for an observation to be in a given cluster
+  #head(mb$z)
+  
+  # get probabilities, means, variances
+  #summary(mb, parameters = TRUE)
+  
+  saveRDS(mb, file = paste0(outDir, '/res_mclust_nbClusters.', nb_clusters, '.rds'))
+  
+  clusters = mb$classification
+  clusters = clusters[match(rownames(mat), names(clusters))]  
+  
+  keep = table(metadata$condition, mb$classification)
+  
+  manual_modify_clusterIndex = FALSE
+  
+  if(manual_modify_clusterIndex){
+    
+    # 3 > 7
+    #index_map = c(4, 5, 2, 6, 7, 1, 3)
+    index_map = c(1, 3, 4, 7, 6, 2, 5)
+    
+    xx = keep[, index_map]
+    colnames(xx) = c(1:7)
+    
+    newclusters = clusters
+    for(m in 1:length(index_map))
+    {
+      newclusters[which(clusters == index_map[m])] = m
+    }
+    
+    keep = xx
+    clusters = newclusters
+    
+  }
+  
+  
+  #Compare amount of the data within each cluster
+  write.csv2(keep, file = paste0(outDir, '/cellNumbers_perCluster_perCondition_nbClusters_', 
+                                 nb_clusters, '.csv'))
+  
+  for(n in 1:nrow(keep)){
+    keep[n, ] = keep[n, ]/sum(keep[n,])
+  }
+  
+  write.csv2(keep, file = paste0(outDir, '/cellProportions_perCluster_perCondition_nbCluste_', 
+                                 nb_clusters, '.csv'))
+  
+  res = data.frame(mat, metadata[match(rownames(mat), rownames(metadata)), ], stringsAsFactors = FALSE)
+  
+  res = data.frame(res, clusters, stringsAsFactors = FALSE)
+  
+  table(res$condition, res$clusters)
+  write.csv2(res, file = paste0(outDir, '/data_metadata_clusterIDs_perCondition_nbClusters_', 
+                                nb_clusters, '.csv'))
+  
+  #metadata$cluster = mb$classification
+  cc = unique(clusters)
+  cc = cc[order(cc)]
+  
+  pdf(paste0(outDir, "/markerIntensity_incl.SOX2_nbClusters_", nb_clusters, ".pdf"), 
+      height = 3*nb_clusters, width =16, useDingbats = FALSE)
+  
+  attach(mtcars)
+  par(mfrow=c(length(cc), ncol(mat))) 
+  for(n in 1:length(cc))
+  {
+    c = cc[n];
+    for(m in 1:ncol(mat))
+    {
+      # c = 1; m = 1;
+      hist(mat[which(clusters == c), m], breaks = 50, xlim = range(mat),
+           xlab = '', ylab = paste0('cluster_', c), main = colnames(mat)[m],
+           col = n);
+      
+    }
+  }
+  
+  dev.off()
+  
+  
+  pdf(paste0(outDir, "/clusterProjection_incl.SOX2_nbClusters_", nb_clusters, ".pdf"), 
+      height = 12, width =16, useDingbats = FALSE)
+  
+  #After the data is fit into the model, we plot the model based on clustering results.
+  # plot(mb, "density")
+  source('functions_plotMclust.R')
+  plot.Mclust_cutomized(mb, what=c("classification"), cex = 0.01, 
+                        addEllipses = TRUE, cex_clusterlabels = 2.0)
+  
+  
+  #plot.surface_customized(mb)
+  dev.off()
+  
+  
+}
 
 
 ##########################################
@@ -2130,7 +2323,6 @@ res$pct_pax6 = res$nb_pax6_otsu_global/res$cell_size
 embs = unique(res$embryo)
 cc = unique(res$position)
 cc = c("CLE2",  "CLE1", "somite7", "somite6", "somite5", "somite4", "somite3", "somite2", "somite1")
-
 
 for(n in 1:length(embs))
 {
