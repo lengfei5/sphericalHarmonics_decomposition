@@ -185,6 +185,7 @@ saveWidget(ggplotly(p), file = "myplot.html")
 
 
 
+
 ########################################################
 ########################################################
 # Section II: test the comparison WT between day3, d3.5, d4, d5 and day6
@@ -1191,8 +1192,7 @@ if(ExploraryAnalaysis_by_definingL_opt)
   
   aa = as.matrix(res[, grep('power_per_l_', colnames(res))])
   #bb = as.matrix(res[, grep('power_per_dlogl_', colnames(res))])
-  matplot(log(t(aa[c(1:20), c(1:30)])), type = "l")
-  
+  matplot(log(t(aa[c(1:100), ])), type = "l")
   
   ## convert the power into contribution percentage
   xx = aa
@@ -1204,6 +1204,27 @@ if(ExploraryAnalaysis_by_definingL_opt)
   rm(xx)
   
   aa = aa[, -1]
+  
+  xx = aa
+  for(n in 1:nrow(xx))
+  {
+    xx[n, ] = 2*pi*sqrt(res$r2[n])/sqrt(c(1:100) * (c(1:100) +1))
+  }
+  
+  plot(c(1,1), type = 'n', xlim = c(1, 150), ylim = range(aa), log = 'xy')
+  
+  nb_sample = 50
+  res$cc = paste0(res$condition, '_', res$time)
+  index = c(which(res$cc == 'WT_d3')[1:nb_sample], 
+            which(res$cc == 'KO_KO_d6')[1:nb_sample],
+            which(res$cc == 'WT_d6')[1:nb_sample])
+  cols = rep(c('gray', 'orange', 'darkblue'), each = nb_sample)
+  for(n in 1:length(index))
+  {
+    points(xx[index[n], ], aa[index[n],], col = cols[n], type = 'l')
+  }
+  
+  #matplot(log(t(xx[c(1:100), ])), type = "l")
   
   table(res$condition, res$time)
   
@@ -1469,8 +1490,8 @@ if(ExploraryAnalaysis_by_definingL_opt)
   res$r2_log = log10(res$r2)
   res$size_log = log10(res$cyst_size)
   
-  res$lmax_norm = log10(res$lmax/res$r2)
-  res$wavelength = log10(res$r2/res$lmax)
+  #res$lmax_norm = log10(res$lmax/res$r2)
+  #res$wavelength = log10(res$r2/res$lmax)
   res$wavelength_v2 = 2*pi*sqrt(res$r2)/(res$lmax*(res$lmax+1))
   
   res$condition = factor(res$condition, levels = c("WT", "KO_KO", "TetOn_TetON_RA",  'TetOn_TetON_dox'))
@@ -1590,6 +1611,7 @@ if(ExploraryAnalaysis_by_definingL_opt)
     theme(legend.position = c(1.05,.8), legend.direction = "vertical") +
     theme(legend.title = element_blank(), 
           legend.text = element_text(size = 14)) 
+  
   ggsave(filename = paste0(figureDir, '/dominantWavelength_patternQuality_v1.pdf'), height = 6, width = 10)
   
   
